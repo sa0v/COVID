@@ -1,7 +1,7 @@
 # COVID
 
-This [RStudio]() project displays a plot of case numbers and death count due to COVID-19,
-for the province of Newfoundland and Labrador, Canada.
+This [RStudio](https://posit.co/products/open-source/rstudio/) project displays a plot of total case numbers and deaths
+due to COVID-19, for the province of Newfoundland and Labrador, Canada.
 
 ## License
 
