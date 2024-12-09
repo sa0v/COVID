@@ -15,7 +15,7 @@ data <- data |>
   # Converting the plot to log. scale introduces infinite values where totalcases=0
   # or numdeaths = 0, so simply exclude these cases
   filter(totalcases > 0 & numdeaths > 0) |>
-  na.omit(data)
+  drop_na(c(totalcases, numdeaths))
 
 data |>
   ggplot(mapping = aes(x = date, y = totalcases)) +
