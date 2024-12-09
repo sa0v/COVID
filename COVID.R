@@ -23,7 +23,7 @@ data <- na.omit(data)
 ggplot(data=data, mapping=aes(x=date,y=totalcases)) +
   geom_line(mapping=aes(color="Cases"),linewidth=1) + 
   geom_line(mapping=aes(x=date,y=numdeaths,color="Deaths"),linewidth=1) +
-  scale_y_log10() +
-  labs(x="Year",y="Cases and Deaths (Log. Scale)", title="Total COVID-19 Cases and Deaths") + 
+  scale_y_continuous(trans="log10") +
+  labs(x="Date",y="Total Count (Log. Scale)", title="Total COVID-19 Cases and Deaths") + 
   facet_wrap(~prname) +
   scale_colour_colorblind(name="Legend")
