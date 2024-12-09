@@ -11,7 +11,7 @@ options(scipen=999)
 data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
 
 # Transform!
-province <- "Nunavut"
+province <- "Newfoundland and Labrador"
 data <- transform(data, totalcases = as.numeric(totalcases))
 data <- data[data$totalcases >= 0 & data$numdeaths >= 0,]
 data <- data[data$prname == province,]
