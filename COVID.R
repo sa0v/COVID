@@ -7,18 +7,16 @@ library(ggthemes)
 # Disable the display of scientific notation.
 options(scipen=999)
 
-# Read a publicly available data set provided by Health Canada.
 data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
 
-# Transform!
 data <- transform(data, totalcases = as.numeric(totalcases))
-data <- data[data$totalcases > 0 & data$numdeaths > 0,]
-data <- data[data$prname == "Newfoundland and Labrador",]
+data <- data |>
+  filter(prname == "Newfoundland and Labrador") |>
+  # Converting the plot to log. scale introduces infinite values where totalcases=0
+  # or numdeaths = 0, so simply exclude these cases
+  filter(totalcases > 0 & numdeaths > 0) |>
+  na.omit(data)
 
-# Tidy!
-data <- na.omit(data)
-
-# Visualize!
 data |>
   ggplot(mapping = aes(x = date, y = totalcases)) +
   geom_line(mapping = aes(color = "Total cases"),
