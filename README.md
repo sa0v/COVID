@@ -1,9 +1,11 @@
 # COVID
 
-This [RStudio](https://posit.co/products/open-source/rstudio/) project displays a plot containing:
+This [RStudio](https://posit.co/products/open-source/rstudio/) project displays provincial
+COVID-19 statistics in plot form, using a data set made publicly available by Health Canada.
+The plot displays total case numbers and deaths due to COVID-19 over time for the province
+of Newfoundland and Labrador, though it can easily be adapted to display the same data for
+**any** Canadian province.
 
-- the total number of cases of COVID-19 in the province of Newfoundland and Labrador,
-- the total number of deaths due to COVID-19 in the same province.
 
 ## License
 
