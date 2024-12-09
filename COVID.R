@@ -13,8 +13,9 @@ data <- transform(data, totalcases = as.numeric(totalcases))
 data <- data |>
   filter(prname == "Newfoundland and Labrador") |>
   # Converting the plot to log. scale introduces infinite values where totalcases=0
-  # or numdeaths = 0, so simply exclude these cases
+  # or numdeaths = 0, so simply exclude these cases.
   filter(totalcases > 0 & numdeaths > 0) |>
+  # Drop only those observations where NA values occur for totalcases or numdeaths.
   drop_na(c(totalcases, numdeaths))
 
 data |>
