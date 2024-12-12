@@ -1,0 +1,99 @@
+---
+title: "COVID-19 in Canada"
+output: html_notebook
+---
+
+This [RStudio](https://posit.co/products/open-source/rstudio/) notebook provides insight into some of the impact of COVID-19 in Canada. The data used by this notebook
+was published by Health Canada on their website.
+
+## Total Cases and Deaths
+
+We can get a sense for the scale of the pandemic in Canada by plotting the total
+cases and deaths over time, on a **logarithmic scale** to emphasize the rate
+of change in these variables.
+
+```{r}
+# Plot the total cases and deaths due to COVID-19 over time in Canada.
+
+library(tidyverse)
+library(ggthemes)
+
+# Disable the display of scientific notation.
+options(scipen=999)
+
+data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+
+data |> transform(totalcases = as.numeric(totalcases)) |>
+  filter(prname == "Canada") |>
+  # Converting the plot to log. scale introduces infinite values where totalcases=0
+  # or numdeaths = 0, so simply exclude these cases.
+  filter(totalcases > 0 & numdeaths > 0) |>
+  drop_na(c(totalcases, numdeaths)) |>
+  ggplot(mapping = aes(x = date, y = totalcases)) +
+  geom_line(mapping = aes(color = "Total cases"),
+            linewidth = 1) +
+  geom_line(
+    mapping = aes(x = date, y = numdeaths, color = "Total deaths"),
+    linewidth = 1
+  ) +
+  scale_y_continuous(trans = "log10") +
+  scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
+  labs(x = "Year", y = "Total (Log. Scale)", title = "Total COVID-19 Cases and Deaths") +
+  facet_wrap(~ prname) +
+  scale_colour_colorblind(name = "Legend")
+```
+
+## The Top Five
+
+The five provinces which experienced the highest number of COVID-19 cases were as
+follows:
+
+```{r}
+# What are the top five Canadian provinces with the most recorded COVID-19
+# cases?
+
+library(tidyverse)
+library(ggthemes)
+
+data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+
+data |>
+  # Filter these out as they are not provinces!
+  filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  transform(totalcases = as.numeric(totalcases)) |>
+  group_by(prname) |>
+  summarize(cases = max(totalcases, na.rm = TRUE)) |>
+  arrange(desc(cases)) |>
+  slice_head(n=5) |>
+  ggplot(aes(x=reorder(prname,-cases),y=cases,color=prname,fill=prname)) +
+    geom_col(show.legend=FALSE) +
+  labs(x="Province",y="Cases",title="Top 5 COVID-19 Cases by Province") +
+  scale_color_colorblind() +
+  scale_fill_colorblind()
+```
+
+Similarly, the five provinces which experienced the highest number of deaths due to
+COVID-19 were the following:
+
+```{r}
+# What are the top five Canadian provinces with the most recorded
+# deaths due to COVID-19?
+
+library(tidyverse)
+library(ggthemes)
+
+data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+
+data |>
+  # Filter these out as they are not provinces!
+  filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  group_by(prname) |>
+  summarize(deaths = max(numdeaths, na.rm = TRUE)) |>
+  arrange(desc(deaths)) |>
+  slice_head(n=5) |>
+  ggplot(aes(x=reorder(prname,-deaths),y=deaths,color=prname,fill=prname)) +
+  geom_col(show.legend=FALSE) +
+  labs(x="Province",y="Deaths",title="Top 5 COVID-19 Deaths by Province") +
+  scale_color_colorblind() +
+  scale_fill_colorblind()
+```
