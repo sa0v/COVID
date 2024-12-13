@@ -97,3 +97,23 @@ data |>
   scale_color_colorblind() +
   scale_fill_colorblind()
 ```
+
+## The Beginning
+
+Which province was the first to report cases of COVID-19?
+
+```{r}
+library(tidyverse)
+data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+data |>
+  # Filter these out as they are not provinces!
+  filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  filter(totalcases>0) |>
+  slice_head(n=1) |>
+  select(prname,date,totalcases) |>
+  rename_at("prname",~"Province") |>
+  rename_at("date",~"Date") |>
+  rename_at("totalcases",~"Total Cases")
+```
+According to the Health Canada data set, the first province to report a positive case
+of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case of COVID-19 was in a man from Toronto, Ontario who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) This is due to the fact that the Health Canada data set only dates back to cases recorded since **02/08/2020.** The case in Toronto, Ontario occurred in **January of 2020,** putting that case (and some others) outside of the time covered by Health Canada.
