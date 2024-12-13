@@ -1,7 +1,7 @@
 # COVID
 
-This [RStudio](https://global.rstudio.com/categories/rstudio-ide/) notebook analyzes a data set on COVID-19 cases and deaths,
-made publicly available by Health Canada on their website.
+This [RStudio](https://posit.co/products/open-source/rstudio/) notebook provides insight into the impact of COVID-19 in Canada, using a data set made publicly
+available by Health Canada.
 
 ## License
 
