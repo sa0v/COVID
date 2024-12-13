@@ -85,12 +85,12 @@ data |>
   transform(totalcases = as.numeric(totalcases)) |>
   group_by(prname) |>
   reframe(cases = max(totalcases, na.rm = TRUE),deaths=max(numdeaths,na.rm = TRUE)) |>
-  arrange(desc(cases)) |>
+  arrange(desc(cases),desc(deaths)) |>
   slice_head(n=5) |>
   ggplot(aes(x=reorder(prname,-cases),y=cases)) +
   geom_col(aes(fill="Cases",color="Cases")) +
   geom_col(aes(y=deaths,fill="Deaths",color="Deaths")) +
-  labs(x="Province",y="Cases",title="Top 5 COVID-19 Cases and Deaths by Province",fill="Legend") +
+  labs(x="Province",y="Cases/Deaths",title="Top 5 COVID-19 Cases and Deaths by Province",fill="Legend") +
   guides(color="none") +
   scale_color_colorblind() +
   scale_fill_colorblind()
