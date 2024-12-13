@@ -66,8 +66,6 @@ data |> transform(totalcases = as.numeric(totalcases)) |>
 
 ## Total Cases by Province
 
-Here are the total case counts for each province.
-
 ```{r}
 library(tidyverse)
 library(ggthemes)
@@ -90,8 +88,6 @@ data |>
 ```
 
 ## Total Deaths by Province
-
-Similarly, we can plot the number of deaths due to COVID-19 across Canada in the following manner:
 
 ```{r}
 library(tidyverse)
