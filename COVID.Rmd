@@ -68,8 +68,7 @@ data |> transform(totalcases = as.numeric(totalcases)) |>
 
 ## The Top Five
 
-The five provinces which experienced the highest number of COVID-19 cases were as
-follows:
+The five provinces which experienced the highest number of COVID-19 cases and deaths were as follows:
 
 ```{r}
 # What are the top five Canadian provinces with the most recorded COVID-19
@@ -85,38 +84,14 @@ data |>
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   transform(totalcases = as.numeric(totalcases)) |>
   group_by(prname) |>
-  summarize(cases = max(totalcases, na.rm = TRUE)) |>
+  reframe(cases = max(totalcases, na.rm = TRUE),deaths=max(numdeaths,na.rm = TRUE)) |>
   arrange(desc(cases)) |>
   slice_head(n=5) |>
-  ggplot(aes(x=reorder(prname,-cases),y=cases,color=prname,fill=prname)) +
-    geom_col(show.legend=FALSE) +
-  labs(x="Province",y="Cases",title="Top 5 COVID-19 Cases by Province") +
-  scale_color_colorblind() +
-  scale_fill_colorblind()
-```
-
-Similarly, the five provinces which experienced the highest number of deaths due to
-COVID-19 were the following:
-
-```{r}
-# What are the top five Canadian provinces with the most recorded
-# deaths due to COVID-19?
-
-library(tidyverse)
-library(ggthemes)
-
-data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
-
-data |>
-  # Filter these out as they are not provinces!
-  filter(prname != "Canada" & prname != "Repatriated travellers") |>
-  group_by(prname) |>
-  summarize(deaths = max(numdeaths, na.rm = TRUE)) |>
-  arrange(desc(deaths)) |>
-  slice_head(n=5) |>
-  ggplot(aes(x=reorder(prname,-deaths),y=deaths,color=prname,fill=prname)) +
-  geom_col(show.legend=FALSE) +
-  labs(x="Province",y="Deaths",title="Top 5 COVID-19 Deaths by Province") +
+  ggplot(aes(x=reorder(prname,-cases),y=cases)) +
+  geom_col(aes(fill="Cases",color="Cases")) +
+  geom_col(aes(y=deaths,fill="Deaths",color="Deaths")) +
+  labs(x="Province",y="Cases",title="Top 5 COVID-19 Cases and Deaths by Province",fill="Legend") +
+  guides(color="none") +
   scale_color_colorblind() +
   scale_fill_colorblind()
 ```
