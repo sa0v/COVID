@@ -29,7 +29,7 @@ data |>
 ```
 
 According to the data set, the first province to report positive cases
-of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case of COVID-19 was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases included in the data set were reported on **02/08/2020.** The Ontario case was reported to the public on **1/25/2020** and was not included in the data set.
+of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case of COVID-19 was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases included in the data set were reported on **02/08/2020,** whereas the Ontario case was reported to the public on **01/25/2020.**
 
 ## Total Cases and Deaths
 
