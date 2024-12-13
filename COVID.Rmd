@@ -34,7 +34,7 @@ of COVID-19 was **British Columbia.** A quick check of the facts, however, sugge
 ## Total Cases and Deaths
 
 We can get a sense for the scale of the pandemic in Canada by plotting the total
-cases and deaths over time, on a **logarithmic scale** to emphasize the rate
+cases and deaths over time on a **logarithmic scale,** to emphasize the rate
 of change in these variables.
 
 ```{r}
