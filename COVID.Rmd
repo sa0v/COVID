@@ -7,8 +7,8 @@ output:
   pdf_document: default
 ---
 
-This [RStudio](https://posit.co/products/open-source/rstudio/) notebook provides insight into some of the impact of COVID-19 in Canada. The data used by this notebook
-was published by Health Canada on their website.
+This [RStudio](https://posit.co/products/open-source/rstudio/) notebook provides insight into the impact of COVID-19 in Canada, using a data set made publicly
+available by Health Canada.
 
 ## The Beginning
 
