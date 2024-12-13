@@ -50,9 +50,7 @@ data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-d
 
 data |> transform(totalcases = as.numeric(totalcases)) |>
   filter(prname == "Canada") |>
-  # Converting the plot to log. scale introduces infinite values where totalcases=0
-  # or numdeaths = 0, so simply exclude these cases.
-  filter(totalcases > 0 & numdeaths > 0) |>
+  filter(totalcases >= 0 & numdeaths >= 0) |>
   drop_na(c(totalcases, numdeaths)) |>
   ggplot(mapping = aes(x = date, y = totalcases)) +
   geom_line(mapping = aes(color = "Total cases"),
