@@ -12,7 +12,7 @@ available by Health Canada.
 
 ## The Beginning
 
-Which province was the first to report cases of COVID-19?
+What was the first province to report positive cases of COVID-19?
 
 ```{r}
 library(tidyverse)
@@ -29,17 +29,15 @@ data |>
 ```
 
 According to the data set, the first province to report positive cases
-of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases in the data set date back to **02/08/2020,** whereas the Ontario case was reported to the public on **01/25/2020.**
+of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases in the data set date back to **02/08/2020,** whereas the Ontario case was reported to the public on **01/25/2020.** The reason for the discrepancy is unknown.
 
-## Total Cases and Deaths
+## Total Cases and Deaths Over Time
 
 We can get a sense for the scale of the pandemic in Canada by plotting the total
 cases and deaths over time on a **logarithmic scale,** to emphasize the rate
 of change in these variables.
 
 ```{r}
-# Plot the total cases and deaths due to COVID-19 over time in Canada.
-
 library(tidyverse)
 library(ggthemes)
 
@@ -66,14 +64,11 @@ data |> transform(totalcases = as.numeric(totalcases)) |>
   scale_colour_colorblind(name = "Legend")
 ```
 
-## The Top Five
+## Total Cases by Province
 
-The five provinces which experienced the highest number of COVID-19 cases and deaths were as follows:
+Here are the total case counts for each province.
 
 ```{r}
-# What are the top five Canadian provinces with the most recorded COVID-19
-# cases?
-
 library(tidyverse)
 library(ggthemes)
 
@@ -84,15 +79,37 @@ data |>
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   transform(totalcases = as.numeric(totalcases)) |>
   group_by(prname) |>
-  reframe(cases = max(totalcases, na.rm = TRUE),deaths=max(numdeaths,na.rm = TRUE)) |>
-  arrange(desc(cases),desc(deaths)) |>
-  slice_head(n=5) |>
-  ggplot(aes(x=reorder(prname,-cases),y=cases)) +
-  geom_col(aes(fill="Cases",color="Cases")) +
-  geom_col(aes(y=deaths,fill="Deaths",color="Deaths")) +
-  labs(x="Province",y="Cases/Deaths",title="Top 5 COVID-19 Cases and Deaths by Province",fill="Legend") +
+  reframe(cases = max(totalcases, na.rm = TRUE)) |>
+  arrange(desc(cases)) |>
+  ggplot(aes(y=reorder(prname,cases),x=cases)) +
+  geom_col(aes(fill="Total Cases",color="Total Cases")) +
+  labs(y="Province",x="Total Cases",title="Total COVID-19 Cases by Province",fill="Legend") +
   guides(color="none") +
   scale_color_colorblind() +
   scale_fill_colorblind()
 ```
 
+## Total Deaths by Province
+
+Similarly, we can plot the number of deaths due to COVID-19 across Canada in the following manner:
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+
+data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+
+data |>
+  # Filter these out as they are not provinces!
+  filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  transform(totalcases = as.numeric(totalcases)) |>
+  group_by(prname) |>
+  reframe(deaths = max(numdeaths, na.rm = TRUE)) |>
+  arrange(desc(deaths)) |>
+  ggplot(aes(y=reorder(prname,deaths),x=deaths)) +
+  geom_col(aes(fill="Total Deaths",color="Total Deaths")) +
+  labs(y="Province",x="Total Deaths",title="Total COVID-19 Deaths by Province",fill="Legend") +
+  guides(color="none") +
+  scale_color_colorblind() +
+  scale_fill_colorblind()
+```
