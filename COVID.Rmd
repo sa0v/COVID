@@ -31,7 +31,9 @@ data |>
 According to the data set, the first province to report positive cases
 of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases in the data set date back to **02/08/2020,** whereas the Ontario case was reported to the public on **01/25/2020.** The reason for the discrepancy is unknown.
 
-## Total Cases and Deaths Over Time
+## Diagrams
+
+### Total Cases and Deaths Over Time
 
 We can get a sense for the scale of the pandemic in Canada by plotting the total
 cases and deaths over time on a **logarithmic scale,** to emphasize the rate
@@ -64,7 +66,9 @@ data |> transform(totalcases = as.numeric(totalcases)) |>
   scale_colour_colorblind(name = "Legend")
 ```
 
-## Total Cases by Province
+### Total Cases by Province
+
+In order to examine the impact upon the individual provinces, first let us plot the total case count for each province.
 
 ```{r}
 library(tidyverse)
@@ -78,16 +82,19 @@ data |>
   transform(totalcases = as.numeric(totalcases)) |>
   group_by(prname) |>
   reframe(cases = max(totalcases, na.rm = TRUE)) |>
-  arrange(desc(cases)) |>
   ggplot(aes(y=reorder(prname,cases),x=cases)) +
   geom_col(aes(fill="Total Cases",color="Total Cases")) +
   labs(y="Province",x="Total Cases",title="Total COVID-19 Cases by Province",fill="Legend") +
   guides(color="none") +
   scale_color_colorblind() +
-  scale_fill_colorblind()
+  scale_fill_colorblind() +
+  theme(legend.position = "none")
 ```
 
-## Total Deaths by Province
+### Total Deaths by Province
+
+We will plot the total deaths that occurred in each province in
+a similar fashion.
 
 ```{r}
 library(tidyverse)
@@ -101,11 +108,40 @@ data |>
   transform(totalcases = as.numeric(totalcases)) |>
   group_by(prname) |>
   reframe(deaths = max(numdeaths, na.rm = TRUE)) |>
-  arrange(desc(deaths)) |>
   ggplot(aes(y=reorder(prname,deaths),x=deaths)) +
   geom_col(aes(fill="Total Deaths",color="Total Deaths")) +
   labs(y="Province",x="Total Deaths",title="Total COVID-19 Deaths by Province",fill="Legend") +
   guides(color="none") +
   scale_color_colorblind() +
-  scale_fill_colorblind()
+  scale_fill_colorblind() +
+  theme(legend.position = "none")
+```
+
+### Percentage of Deaths vs. Total Cases
+
+Finally, let us plot of the percentage of deaths that occurred among each province's infected population.
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+
+data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+
+data |>
+  # Filter these out as they are not provinces!
+  filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  transform(totalcases = as.numeric(totalcases)) |>
+  arrange(desc(totalcases)) |>
+  distinct(prname,.keep_all=TRUE) |>
+  select(prname,totalcases,numdeaths) |>
+  mutate(percent_deaths = numdeaths / totalcases) |>
+  ggplot(aes(x=reorder(prname,percent_deaths),y=percent_deaths,color="Deaths",fill="Deaths")) +
+  geom_col() + 
+  coord_flip() +
+  scale_y_continuous(labels = scales::percent) +
+  scale_color_colorblind() +
+  scale_fill_colorblind() + 
+  guides(color="none") +
+  theme(legend.position="none") +
+  labs(title="Percentage of Deaths vs. Total Cases of COVID-19",x="Province",y="Percentage")
 ```
