@@ -33,7 +33,7 @@ of COVID-19 was **British Columbia.** A quick check of the facts, however, sugge
 
 ## Diagrams
 
-### Total Cases and Deaths Over Time
+### 1. Total Cases and Deaths Over Time
 
 We can get a sense for the scale of the pandemic in Canada by plotting the total
 cases and deaths over time on a **logarithmic scale,** to emphasize the rate
@@ -66,7 +66,7 @@ data |> transform(totalcases = as.numeric(totalcases)) |>
   scale_colour_colorblind(name = "Legend")
 ```
 
-### Total Cases by Province
+### 2. Total Cases by Province
 
 In order to examine the impact upon the individual provinces, first let us plot the total case count for each province.
 
@@ -91,7 +91,7 @@ data |>
   theme(legend.position = "none")
 ```
 
-### Total Deaths by Province
+### 3. Total Deaths by Province
 
 We will plot the total deaths that occurred in each province in
 a similar fashion.
@@ -117,7 +117,7 @@ data |>
   theme(legend.position = "none")
 ```
 
-### Percentage of Deaths vs. Total Cases
+### 4. Percentage of Deaths vs. Total Cases
 
 Finally, let us plot of the percentage of deaths that occurred among each province's infected population.
 
