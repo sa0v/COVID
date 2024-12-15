@@ -7,6 +7,16 @@ output:
   pdf_document: default
 ---
 
+```{r}
+  library(tidyverse)
+  library(ggthemes)
+  data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+  # Disable the display of scientific notation.
+  options(scipen=999)
+```
+
+## Introduction
+
 This [RStudio](https://posit.co/products/open-source/rstudio/) notebook provides insight into the impact of COVID-19 in Canada, using a data set made publicly
 available by Health Canada.
 
@@ -15,8 +25,6 @@ available by Health Canada.
 What was the first province to report positive cases of COVID-19?
 
 ```{r}
-library(tidyverse)
-data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
@@ -40,14 +48,6 @@ cases and deaths over time on a **logarithmic scale,** to emphasize the rate
 of change in these variables.
 
 ```{r}
-library(tidyverse)
-library(ggthemes)
-
-# Disable the display of scientific notation.
-options(scipen=999)
-
-data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
-
 data |> transform(totalcases = as.numeric(totalcases)) |>
   filter(prname == "Canada") |>
   filter(totalcases >= 0 & numdeaths >= 0) |>
@@ -71,11 +71,6 @@ data |> transform(totalcases = as.numeric(totalcases)) |>
 In order to examine the impact upon the individual provinces, first let us plot the total case count for each province.
 
 ```{r}
-library(tidyverse)
-library(ggthemes)
-
-data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
-
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
@@ -97,11 +92,6 @@ We will plot the total deaths that occurred in each province in
 a similar fashion.
 
 ```{r}
-library(tidyverse)
-library(ggthemes)
-
-data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
-
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
@@ -122,11 +112,6 @@ data |>
 Finally, let us plot of the percentage of deaths that occurred among each province's infected population.
 
 ```{r}
-library(tidyverse)
-library(ggthemes)
-
-data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
-
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
