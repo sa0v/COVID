@@ -80,7 +80,6 @@ data |>
   ggplot(aes(y=reorder(prname,cases),x=cases)) +
   geom_col(aes(fill="Total Cases",color="Total Cases")) +
   labs(y="Province",x="Total Cases",title="Total COVID-19 Cases by Province",fill="Legend") +
-  guides(color="none") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
@@ -101,7 +100,6 @@ data |>
   ggplot(aes(y=reorder(prname,deaths),x=deaths)) +
   geom_col(aes(fill="Total Deaths",color="Total Deaths")) +
   labs(y="Province",x="Total Deaths",title="Total COVID-19 Deaths by Province",fill="Legend") +
-  guides(color="none") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
