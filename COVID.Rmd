@@ -10,7 +10,7 @@ output:
 ```{r}
   library(tidyverse)
   library(ggthemes)
-  data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+  data <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv",col_types=list(totalcases=col_double()),na=c("-",""))
   # Disable the display of scientific notation.
   options(scipen=999)
 ```
@@ -48,7 +48,7 @@ cases and deaths over time on a **logarithmic scale,** to emphasize the rate
 of change in these variables.
 
 ```{r}
-data |> transform(totalcases = as.numeric(totalcases)) |>
+data |>
   filter(prname == "Canada") |>
   filter(totalcases >= 0 & numdeaths >= 0) |>
   drop_na(c(totalcases, numdeaths)) |>
@@ -74,7 +74,6 @@ In order to examine the impact upon the individual provinces, first let us plot 
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
-  transform(totalcases = as.numeric(totalcases)) |>
   group_by(prname) |>
   reframe(cases = max(totalcases, na.rm = TRUE)) |>
   ggplot(aes(y=reorder(prname,cases),x=cases)) +
@@ -94,7 +93,6 @@ a similar fashion.
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
-  transform(totalcases = as.numeric(totalcases)) |>
   group_by(prname) |>
   reframe(deaths = max(numdeaths, na.rm = TRUE)) |>
   ggplot(aes(y=reorder(prname,deaths),x=deaths)) +
@@ -113,7 +111,6 @@ Finally, let us plot of the percentage of deaths that occurred among each provin
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
-  transform(totalcases = as.numeric(totalcases)) |>
   arrange(desc(totalcases)) |>
   distinct(prname,.keep_all=TRUE) |>
   select(prname,totalcases,numdeaths) |>
@@ -133,4 +130,4 @@ data |>
 
 The second and third plots reveal **Ontario** and **Quebec** as being heavily impacted by COVID-19, both in terms of total case counts and fatalities. Each province individually accounted for well over one million cases. In addition, both provinces reported a relatively high number of deaths, with Quebec having reported the most at over **20,000** fatalities. Such high numbers must be viewed in perspective, however. Ontario accounts for over [40%](https://en.wikipedia.org/wiki/Demographics_of_Ontario) of the entire Canadian population alone, while Quebec accounts for a little under [23%.](https://en.wikipedia.org/wiki/Demographics_of_Quebec) It may be that the progression of COVID-19 was in proportion for Ontario and Quebec to the rest of the country; their dominance in total case counts and deaths due to the disease may simply be a result of their respective high populations.
 
-The fourth plot, illustrating the percentage of deaths due to COVID-19 versus the total case count, presents a different picture of the same data. British Columbia ranks the first in terms of the percentage of COVID-19 patients who died from the disease. However, British Columbia experienced less than **2%** deaths out of an infected population of hundreds of thousands. In fact, **no** Canadian province experienced a percentage greater than **2%.** The actual number of deaths due to the disease remained a small percentage of each province's infected population.
+The fourth plot, illustrating the percentage of deaths due to COVID-19 versus the total case count, presents a different picture of the same data. **British Columbia** ranks the first in terms of the percentage of COVID-19 patients who died from the disease. However, British Columbia experienced less than **2%** deaths out of an infected population of hundreds of thousands. In fact, **no** Canadian province experienced a percentage greater than **2%.** The actual number of deaths due to the disease remained a small percentage of each province's infected population.
