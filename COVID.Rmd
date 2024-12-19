@@ -20,7 +20,9 @@ output:
 This [RStudio](https://posit.co/products/open-source/rstudio/) notebook provides insight into the impact of COVID-19 in Canada, using a data set made publicly
 available by Health Canada.
 
-## The Beginning
+## Exploring the Data
+
+### The Beginning
 
 What was the first province to report positive cases of COVID-19?
 
@@ -38,8 +40,6 @@ data |>
 
 According to the data set, the first province to report positive cases
 of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases in the data set date back to **02/08/2020,** whereas the Ontario case was reported to the public on **01/25/2020.** The reason for the discrepancy is unknown.
-
-## Exploring the Data
 
 ### Total Cases by Province
 
