@@ -39,34 +39,9 @@ data |>
 According to the data set, the first province to report positive cases
 of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases in the data set date back to **02/08/2020,** whereas the Ontario case was reported to the public on **01/25/2020.** The reason for the discrepancy is unknown.
 
-## Plots
+## Exploring the Data
 
-### 1. Total Cases and Deaths Over Time
-
-We can get a sense for the scale of the pandemic in Canada by plotting the total
-cases and deaths over time on a **logarithmic scale,** to emphasize the rate
-of change in these variables.
-
-```{r}
-data |>
-  filter(prname == "Canada") |>
-  filter(totalcases >= 0 & numdeaths >= 0) |>
-  drop_na(c(totalcases, numdeaths)) |>
-  ggplot(mapping = aes(x = date, y = totalcases)) +
-  geom_line(mapping = aes(color = "Total cases"),
-            linewidth = 1) +
-  geom_line(
-    mapping = aes(x = date, y = numdeaths, color = "Total deaths"),
-    linewidth = 1
-  ) +
-  scale_y_continuous(trans = "log10") +
-  scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
-  labs(x = "Year", y = "Total (Log. Scale)", title = "Total COVID-19 Cases and Deaths") +
-  facet_wrap(~ prname) +
-  scale_colour_colorblind(name = "Legend")
-```
-
-### 2. Total Cases by Province
+### Total Cases by Province
 
 In order to examine the impact upon the individual provinces, first let us plot the total case count for each province.
 
@@ -78,13 +53,15 @@ data |>
   reframe(cases = max(totalcases, na.rm = TRUE)) |>
   ggplot(aes(y=reorder(prname,cases),x=cases)) +
   geom_col(aes(fill="Total Cases",color="Total Cases")) +
-  labs(y="Province",x="Total Cases",title="Total COVID-19 Cases by Province",fill="Legend") +
+  labs(y="Province",x="Total Cases",title="Total COVID-19 Cases by Province",fill="Legend",caption="Data from Health Canada") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
 ```
 
-### 3. Total Deaths by Province
+It is apparent from the above plot that **Ontario** experienced the greatest number of total COVID-19 cases.
+
+### Total Deaths by Province
 
 We will plot the total deaths that occurred in each province in
 a similar fashion.
@@ -97,13 +74,15 @@ data |>
   reframe(deaths = max(numdeaths, na.rm = TRUE)) |>
   ggplot(aes(y=reorder(prname,deaths),x=deaths)) +
   geom_col(aes(fill="Total Deaths",color="Total Deaths")) +
-  labs(y="Province",x="Total Deaths",title="Total COVID-19 Deaths by Province",fill="Legend") +
+  labs(y="Province",x="Total Deaths",title="Total Deaths Due to COVID-19 By Province",fill="Legend",caption="Data from Health Canada") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
 ```
 
-### 4. Percentage of Deaths vs. Total Cases
+In this case, **Quebec** appears to have been the province which suffered the most deaths due to COVID-19.
+
+### Percentage of Patients who Died from COVID-19
 
 Finally, let us plot of the percentage of deaths that occurred among each province's infected population.
 
@@ -123,11 +102,7 @@ data |>
   scale_fill_colorblind() + 
   guides(color="none") +
   theme(legend.position="none") +
-  labs(title="Percentage of Deaths vs. Total Cases of COVID-19",x="Province",y="Percentage")
+  labs(title="Percentage of Patients who Died from COVID-19", x="Province",y="Percentage",caption="Data from Health Canada")
 ```
 
-## Analysis
-
-The second and third plots reveal **Ontario** and **Quebec** as being heavily impacted by COVID-19, both in terms of total case counts and fatalities. Each province individually accounted for well over one million cases. In addition, both provinces reported a relatively high number of deaths, with Quebec having reported the most at over **20,000** fatalities. Such high numbers must be viewed in perspective, however. Ontario accounts for over [40%](https://en.wikipedia.org/wiki/Demographics_of_Ontario) of the entire Canadian population alone, while Quebec accounts for a little under [23%.](https://en.wikipedia.org/wiki/Demographics_of_Quebec) It may be that the progression of COVID-19 was in proportion for Ontario and Quebec to the rest of the country; their dominance in total case counts and deaths due to the disease may simply be a result of their respective high populations.
-
-The fourth plot, illustrating the percentage of deaths due to COVID-19 versus the total case count, presents a different picture of the same data. **British Columbia** ranks the first in terms of the percentage of COVID-19 patients who died from the disease. However, British Columbia experienced less than **2%** deaths out of an infected population of hundreds of thousands. In fact, **no** Canadian province experienced a percentage greater than **2%.** The actual number of deaths due to the disease remained a small percentage of each province's infected population.
+Among each province's infected population, **British Columbia** experienced the largest number of deaths due to COVID-19. The above plot also reveals an encouraging result; **no** Canadian province recorded a percentage of deaths due to COVID-19 greater than, or equal to, **2%.** In each province, the total number of deaths due to COVID-19 remained a small percentage of the province's total case count.
