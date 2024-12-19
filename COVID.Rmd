@@ -105,4 +105,4 @@ data |>
   labs(title="Percentage of Patients who Died from COVID-19", x="Province",y="Percentage",caption="Data from Health Canada")
 ```
 
-Among each province's infected population, **British Columbia** experienced the largest number of deaths due to COVID-19. The above plot also reveals an encouraging result; **no** Canadian province recorded a percentage of deaths due to COVID-19 greater than, or equal to, **2%.** In each province, the total number of deaths due to COVID-19 remained a small percentage of the province's total case count.
+**British Columbia** experienced the largest amount of deaths with respect to its total infected population. The above plot also reveals an encouraging result; **no** Canadian province recorded a percentage of deaths due to COVID-19 greater than, or equal to, **2%.** In each province, the total number of deaths due to COVID-19 remained a small percentage of the province's total case count.
