@@ -51,15 +51,13 @@ data |>
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   group_by(prname) |>
   reframe(cases = max(totalcases, na.rm = TRUE)) |>
-  ggplot(aes(y=reorder(prname,cases),x=cases)) +
+  ggplot(aes(y=fct_reorder(prname,cases),x=cases)) +
   geom_col(aes(fill="Total Cases",color="Total Cases")) +
-  labs(y="Province",x="Total Cases",title="Total COVID-19 Cases by Province",fill="Legend",caption="Data from Health Canada") +
+  labs(y="Province",x="Total Cases",title="Ontario Experienced the Most COVID-19 Cases",fill="Legend",caption="Data from Health Canada") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
 ```
-
-It is apparent from the above plot that **Ontario** experienced the greatest number of total COVID-19 cases.
 
 ### Total Deaths by Province
 
@@ -72,15 +70,13 @@ data |>
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   group_by(prname) |>
   reframe(deaths = max(numdeaths, na.rm = TRUE)) |>
-  ggplot(aes(y=reorder(prname,deaths),x=deaths)) +
+  ggplot(aes(y=fct_reorder(prname,deaths),x=deaths)) +
   geom_col(aes(fill="Total Deaths",color="Total Deaths")) +
-  labs(y="Province",x="Total Deaths",title="Total Deaths Due to COVID-19 By Province",fill="Legend",caption="Data from Health Canada") +
+  labs(y="Province",x="Total Deaths",title="Quebec Experienced the Most Deaths Due to COVID-19",fill="Legend",caption="Data from Health Canada") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
 ```
-
-In this case, **Quebec** appears to have been the province which suffered the most deaths due to COVID-19.
 
 ### Percentage of Patients who Died from COVID-19
 
@@ -94,15 +90,13 @@ data |>
   distinct(prname,.keep_all=TRUE) |>
   select(prname,totalcases,numdeaths) |>
   mutate(percent_deaths = numdeaths / totalcases) |>
-  ggplot(aes(x=reorder(prname,percent_deaths),y=percent_deaths,color="Deaths",fill="Deaths")) +
+  ggplot(aes(x=fct_reorder(prname,percent_deaths),y=percent_deaths,color="Deaths",fill="Deaths")) +
   geom_col() + 
   coord_flip() +
   scale_y_continuous(labels = scales::percent) +
   scale_color_colorblind() +
   scale_fill_colorblind() + 
-  guides(color="none") +
   theme(legend.position="none") +
-  labs(title="Percentage of Patients who Died from COVID-19", x="Province",y="Percentage",caption="Data from Health Canada")
+  labs(title="British Columbia Had the Largest Percentage of Patients who Died from COVID-19" |> str_wrap(60), x="Province",y="Percentage",caption="Data from Health Canada")
 ```
 
-**British Columbia** experienced the largest amount of deaths with respect to its total infected population. The above plot also reveals an encouraging result; **no** Canadian province recorded a percentage of deaths due to COVID-19 greater than, or equal to, **2%.** In each province, the total number of deaths due to COVID-19 remained a small percentage of the province's total case count.
