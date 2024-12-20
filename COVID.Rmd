@@ -31,15 +31,13 @@ data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   filter(!is.na(totalcases)) |>
-  slice_head(n=1) |>
+  filter(totalcases > 0) |>
+  slice_head(n=10) |>
   select(prname,date,totalcases) |>
   rename_at("prname",~"Province") |>
   rename_at("date",~"Date") |>
   rename_at("totalcases",~"Total Cases")
 ```
-
-According to the data set, the first province to report positive cases
-of COVID-19 was **British Columbia.** A quick check of the facts, however, suggests that the first recorded case was in a man from **Toronto, Ontario** who returned from Wuhan, China. More can be read about the case [here.](https://www.cbc.ca/news/health/canada-coronavirus-timeline-1.5482310) The earliest cases in the data set date back to **02/08/2020,** whereas the Ontario case was reported to the public on **01/25/2020.** The reason for the discrepancy is unknown.
 
 ### Total Cases by Province
 
