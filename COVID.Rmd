@@ -49,6 +49,7 @@ In order to examine the impact upon the individual provinces, first let us plot 
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  filter(!is.na(totalcases)) |>
   group_by(prname) |>
   reframe(cases = max(totalcases, na.rm = TRUE)) |>
   ggplot(aes(y=fct_reorder(prname,cases),x=cases)) +
@@ -68,6 +69,7 @@ a similar fashion.
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  filter(!is.na(numdeaths)) |>
   group_by(prname) |>
   reframe(deaths = max(numdeaths, na.rm = TRUE)) |>
   ggplot(aes(y=fct_reorder(prname,deaths),x=deaths)) +
@@ -86,6 +88,7 @@ Finally, let us plot of the percentage of deaths that occurred among each provin
 data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
+  filter(!is.na(totalcases)) |>
   arrange(desc(totalcases)) |>
   distinct(prname,.keep_all=TRUE) |>
   select(prname,totalcases,numdeaths) |>
