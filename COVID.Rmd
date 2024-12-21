@@ -102,4 +102,4 @@ data |>
   labs(title="British Columbia Had the Largest Percentage of Patients who Died from COVID-19" |> str_wrap(60), x="Province",y="Percentage",caption="Data from Health Canada")
 ```
 
-**British Columbia** reported the largest percentage of patients who died as a result of COVID-19. No Canadian province reported a percentage of patients who died greater than, or equal to, **2%.** In each province, the number of deaths remained a relatively small percentage of that province's infected population.
+**British Columbia** reported the largest percentage of patients who died as a result of COVID-19. The above plot also reveals an encouraging result. In every Canadian province, the percentage of patients who died from COVID-19 remained below **2%.**
