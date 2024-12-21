@@ -39,9 +39,9 @@ data |>
   rename_at("totalcases",~"Total Cases")
 ```
 
-### Total Cases by Province
+**British Columbia** and **Ontario** were both the earliest provinces to report positive cases of COVID-19.
 
-In order to examine the impact upon the individual provinces, first let us plot the total case count for each province.
+### Total Cases by Province
 
 ```{r}
 data |>
@@ -58,10 +58,9 @@ data |>
   theme(legend.position = "none")
 ```
 
-### Total Deaths by Province
+**Ontario** experienced the largest total number of COVID-19 cases. This number must be viewed in perspective, however. Ontario is Canada's most populated province, with nearly [40%](https://en.wikipedia.org/wiki/Demographics_of_Ontario) of the country's population residing in that province alone. Similarly, Quebec, ranking second, is home to a little under [23%](https://en.wikipedia.org/wiki/Demographics_of_Quebec) of the total population of Canada.
 
-We will plot the total deaths that occurred in each province in
-a similar fashion.
+### Total Deaths by Province
 
 ```{r}
 data |>
@@ -77,6 +76,8 @@ data |>
   scale_fill_colorblind() +
   theme(legend.position = "none")
 ```
+
+**Quebec** recorded the most deaths due to COVID-19.
 
 ### Percentage of Patients who Died from COVID-19
 
@@ -101,3 +102,4 @@ data |>
   labs(title="British Columbia Had the Largest Percentage of Patients who Died from COVID-19" |> str_wrap(60), x="Province",y="Percentage",caption="Data from Health Canada")
 ```
 
+**British Columbia** reported the largest percentage of patients who died as a result of COVID-19. No Canadian province reported a percentage of patients who died greater than, or equal to, **2%.** In each province, the number of deaths remained a relatively small percentage of that province's infected population.
