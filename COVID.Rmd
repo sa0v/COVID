@@ -41,7 +41,7 @@ data |>
   rename_at("totalcases",~"Total Cases")
 ```
 
-**British Columbia** and **Ontario** were both the earliest provinces to report positive cases of COVID-19.
+The first provinces to report positive cases of COVID-19 were **British Columbia** and **Ontario.**
 
 ### Total Cases by Province
 
