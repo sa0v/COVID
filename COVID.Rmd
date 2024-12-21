@@ -32,7 +32,9 @@ data |>
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   filter(!is.na(totalcases)) |>
   filter(totalcases > 0) |>
-  slice_head(n=10) |>
+  group_by(prname) |>
+  slice_head(n=1) |>
+  arrange(date) |>
   select(prname,date,totalcases) |>
   rename_at("prname",~"Province") |>
   rename_at("date",~"Date") |>
@@ -49,10 +51,11 @@ data |>
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   filter(!is.na(totalcases)) |>
   group_by(prname) |>
-  reframe(cases = max(totalcases, na.rm = TRUE)) |>
-  ggplot(aes(y=fct_reorder(prname,cases),x=cases)) +
-  geom_col(aes(fill="Total Cases",color="Total Cases")) +
-  labs(y="Province",x="Total Cases",title="Ontario Experienced the Most COVID-19 Cases",fill="Legend",caption="Data from Health Canada") +
+  arrange(desc(totalcases)) |>
+  slice_head(n=1) |>
+  ggplot(aes(y=fct_reorder(prname,totalcases),x=totalcases)) +
+  geom_col(aes(fill="Cases",color="Cases")) +
+  labs(y="Province",x="Cases",title="Total COVID-19 Cases",fill="Legend",caption="Data from Health Canada") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
@@ -68,10 +71,11 @@ data |>
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   filter(!is.na(numdeaths)) |>
   group_by(prname) |>
-  reframe(deaths = max(numdeaths, na.rm = TRUE)) |>
-  ggplot(aes(y=fct_reorder(prname,deaths),x=deaths)) +
+  arrange(desc(numdeaths)) |>
+  slice_head(n=1) |>
+  ggplot(aes(y=fct_reorder(prname,numdeaths),x=numdeaths)) +
   geom_col(aes(fill="Total Deaths",color="Total Deaths")) +
-  labs(y="Province",x="Total Deaths",title="Quebec Experienced the Most Deaths Due to COVID-19",fill="Legend",caption="Data from Health Canada") +
+  labs(y="Province",x="Total Deaths",title="Total Deaths Due to COVID-19",fill="Legend",caption="Data from Health Canada") +
   scale_color_colorblind() +
   scale_fill_colorblind() +
   theme(legend.position = "none")
@@ -88,8 +92,9 @@ data |>
   # Filter these out as they are not provinces!
   filter(prname != "Canada" & prname != "Repatriated travellers") |>
   filter(!is.na(totalcases)) |>
+  group_by(prname) |>
   arrange(desc(totalcases)) |>
-  distinct(prname,.keep_all=TRUE) |>
+  slice_head(n=1) |>
   select(prname,totalcases,numdeaths) |>
   mutate(percent_deaths = numdeaths / totalcases) |>
   ggplot(aes(x=fct_reorder(prname,percent_deaths),y=percent_deaths,color="Deaths",fill="Deaths")) +
@@ -99,7 +104,7 @@ data |>
   scale_color_colorblind() +
   scale_fill_colorblind() + 
   theme(legend.position="none") +
-  labs(title="British Columbia Had the Largest Percentage of Patients who Died from COVID-19" |> str_wrap(60), x="Province",y="Percentage",caption="Data from Health Canada")
+  labs(title="Percentage of Patients who Died from COVID-19" |> str_wrap(60), x="Province",y="Percentage",caption="Data from Health Canada")
 ```
 
-**British Columbia** reported the largest percentage of patients who died as a result of COVID-19. The total number of deaths due to COVID-19 remained a small percentage of each province's total case count.
+**British Columbia** reported the largest percentage of patients who died as a result of COVID-19. No Canadian province reported a percentage greater than, or equal to, **2%.** This demonstrates that across Canada, the total number of deaths due to COVID-19 remained a small percentage of each province's total case count.
