@@ -20,11 +20,11 @@ To study the progression of COVID-19 in the province, we will make use of the **
 ```{r}
 # Load necessary libraries
 library(tidyverse)
-library(randomForest)  
-library(caret)  
-library(ggthemes)  
-library(RColorBrewer)  
-library(lmtest)  
+library(randomForest)
+library(caret)
+library(ggthemes)
+library(RColorBrewer)
+library(lmtest)
 library(grid)  # For text grob
 
 # Load and prepare the data
@@ -94,6 +94,18 @@ for (i in 1:k_folds) {
 
 cv_metrics_avg <- colMeans(cv_metrics)
 
+# Calculate residuals from Random Forest model
+df$residuals_rf <- df$totalcases - df$fitted_cases
+
+# Fit a linear model on the residuals to check for heteroscedasticity
+lm_residuals <- lm(residuals_rf ~ days, data = df)
+
+# Apply the Breusch-Pagan test for heteroscedasticity
+bp_test <- bptest(lm_residuals)
+
+# Extract the p-value for the Breusch-Pagan test
+bp_p_value <- bp_test$p.value
+
 # Plot the actual data, fitted curve, and future predictions with different colors
 ggplot(df_combined, aes(x = days, y = totalcases)) +
   geom_point(data = df_combined %>% filter(is_future == FALSE), color = brewer.pal(3, "Dark2")[1], size = 3) +  # Historical data points
@@ -117,7 +129,8 @@ ggplot(df_combined, aes(x = days, y = totalcases)) +
                     "\nMAE =", round(MAE, 2), 
                     "\nCV R² =", round(cv_metrics_avg["R2"], 4), 
                     "\nCV RMSE =", round(cv_metrics_avg["RMSE"], 2), 
-                    "\nCV MAE =", round(cv_metrics_avg["MAE"], 2)),
+                    "\nCV MAE =", round(cv_metrics_avg["MAE"], 2),
+                    "\nBP p-value =", round(bp_p_value, 4)),  # Add Breusch-Pagan p-value to the text
       gp = gpar(fontsize = 10)
     ),
     xmin = 3050, xmax = 300, ymin = 1000, ymax = 25000  # Adjust the position of the annotation
@@ -133,7 +146,7 @@ With respect to cross validation, CV $R^2$ is close to 1, indicating that the mo
 
 The blue region, after the 1600 day mark, indicates where the model has predicted the total number of cases for the next 365 days. This demonstrates the model's ability to provide future forecasting based on little more than a total daily case count. The model predicts a "plateau" for the total case count, beyond which the number of cases will not grow. In truth there would continue to be new reported cases of COVID-19 (as long as the disease is still circulating), so this plateau would not be perfectly flat, but the general trend is followed; case numbers are beginning to stabilize.
 
-Finally, the results of the Breusch-Pagan test confirm that there is no major evidence of heteroscedasticity. A residuals plot should always be examined to confirm or deny this.
+Finally, the results of the Breusch-Pagan test suggest that there is no significant evidence of heteroscedasticity in the residuals. We should examine a residuals plot to be sure that there are no obvious patterns.
 
 ### Residuals Plot
 
