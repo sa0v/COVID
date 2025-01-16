@@ -105,7 +105,11 @@ ggplot(df_combined, aes(x = days, y = totalcases)) +
        x = "Days Since First Case",
        y = "Total Cases") +
   theme_minimal() +
-  theme(legend.position = "none") +  # Remove legend for simplicity
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5),  # Center the title
+    plot.subtitle = element_text(hjust = 0.5),  # Center the subtitle
+  ) +  # Remove legend for simplicity
   annotation_custom(
     grob = textGrob(
       label = paste("R² =", round(R2, 4), 
@@ -142,7 +146,9 @@ ggplot(df, aes(x = days, y = residuals)) +
   labs(title = str_wrap("Residuals Plot: Random Forest Model",width=50),
        x = "Days Since First Case",
        y = "Residuals (Observed - Fitted)") +
-  theme_minimal()
+  theme_minimal() + theme(
+    plot.title = element_text(hjust = 0.5),  # Center the title
+  )
 
 ```
 
