@@ -1,0 +1,179 @@
+---
+title: "COVID-19 in Newfoundland and Labrador"
+subtitle: "Analysis of the Random Forest Model"
+author: "John W"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+# Introduction
+
+This [RStudio](https://global.rstudio.com/categories/rstudio-ide/) notebook studies a data set made available by **Health Canada** on the total number of COVID-19 cases throughout Canada. In this case, it will be used to study the total number of cases in Newfoundland and Labrador. The purpose of this notebook is to evaluate a particular model which can be used to describe and predict the progression of the disease in the province.
+
+## Random Forest Model
+
+To study the progression of COVID-19 in the province, we will make use of the **random forest model.** The random forest model is an "ensemble machine learning algorithm that combines multiple decision trees to improve the accuracy, robustness, and generalization of predictions. It is widely used for both regression and classification tasks and is particularly effective for handling large, complex datasets with a variety of input features."<sup>1</sup>
+
+### Fitted Curve
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(randomForest)  
+library(caret)  
+library(ggthemes)  
+library(RColorBrewer)  
+library(lmtest)  
+library(grid)  # For text grob
+
+# Load and prepare the data
+data <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+
+df <- data |>
+  filter(prname == "Newfoundland and Labrador") |>
+  mutate(
+    totalcases = as.numeric(totalcases), 
+    days = as.integer(as.Date(date, format = "%Y-%m-%d") - min(as.Date(date, format = "%Y-%m-%d"))),  # Calculate days since the first case
+    sqrt_totalcases = sqrt(totalcases)  # Square root transformation of the totalcases
+  ) |>
+  drop_na(sqrt_totalcases) |> # Drop NA values for the transformed variable
+  filter(!is.na(totalcases) & !is.infinite(totalcases)) |>
+  filter(totalcases > 0)
+
+# Fit the model to the full data using Random Forest
+rf_model_full <- randomForest(sqrt_totalcases ~ days, data = df, importance = TRUE, ntree = 100)
+
+# Calculate fitted cases for the full data
+df$fitted_sqrt_cases <- predict(rf_model_full, newdata = df)
+df$fitted_cases <- df$fitted_sqrt_cases^2  # Transform back to total cases
+
+# Generate future predictions for a given number of future days
+future_days <- 365  # You can adjust this for how many days ahead you want to predict
+last_day <- max(df$days)  # Last observed day in the dataset
+future_dates <- data.frame(days = (last_day + 1):(last_day + future_days))  # Create future days
+
+# Predict future total cases (after the training data)
+future_sqrt_cases <- predict(rf_model_full, newdata = future_dates)
+future_cases <- future_sqrt_cases^2  # Transform back to total cases (square of sqrt)
+
+# Create a data frame for future predictions
+future_df <- data.frame(days = future_dates$days, predicted_cases = future_cases)
+
+# Combine the future predictions with the actual historical data for plotting
+df_combined <- bind_rows(
+  df %>% mutate(predicted_cases = fitted_cases, is_future = FALSE),  # Historical data with fitted values
+  future_df %>% mutate(totalcases = predicted_cases, is_future = TRUE)  # Future predictions with predicted cases
+)
+
+# Performance metrics for the full model
+R2 <- 1 - sum((df$totalcases - df$fitted_cases)^2) / sum((df$totalcases - mean(df$totalcases))^2)
+RMSE <- sqrt(mean((df$totalcases - df$fitted_cases)^2))
+MAE <- mean(abs(df$totalcases - df$fitted_cases))
+
+# K-fold Cross-validation
+k_folds <- 5
+cv_metrics <- data.frame(R2 = numeric(k_folds), RMSE = numeric(k_folds), MAE = numeric(k_folds))
+set.seed(123)
+folds <- createFolds(df$days, k = k_folds, list = TRUE)
+
+for (i in 1:k_folds) {
+  train_indices <- folds[[i]]
+  train_data <- df[train_indices, ]
+  test_data <- df[-train_indices, ]
+  
+  rf_model <- randomForest(sqrt_totalcases ~ days, data = train_data, importance = TRUE, ntree = 100)
+  test_data$fitted_sqrt_cases <- predict(rf_model, newdata = test_data)
+  test_data$fitted_cases <- test_data$fitted_sqrt_cases^2
+  R2_fold <- 1 - sum((test_data$totalcases - test_data$fitted_cases)^2) / sum((test_data$totalcases - mean(test_data$totalcases))^2)
+  RMSE_fold <- sqrt(mean((test_data$totalcases - test_data$fitted_cases)^2))
+  MAE_fold <- mean(abs(test_data$totalcases - test_data$fitted_cases))
+  
+  cv_metrics[i, ] <- c(R2_fold, RMSE_fold, MAE_fold)
+}
+
+cv_metrics_avg <- colMeans(cv_metrics)
+
+# Plot the actual data, fitted curve, and future predictions with different colors
+ggplot(df_combined, aes(x = days, y = totalcases)) +
+  geom_point(data = df_combined %>% filter(is_future == FALSE), color = brewer.pal(3, "Dark2")[1], size = 3) +  # Historical data points
+  geom_line(data = df_combined %>% filter(is_future == FALSE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Dark2")[2], linewidth = 1) +  # Fitted curve for historical data
+  geom_point(data = df_combined %>% filter(is_future == TRUE), color = brewer.pal(3, "Set2")[3], size = 3) +  # Future data points in different color
+  geom_line(data = df_combined %>% filter(is_future == TRUE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Set2")[3], linetype = "dotted", linewidth = 1) +  # Future predictions in dashed line
+  labs(title = "COVID-19 Growth Fitted and Predicted with Random Forest Model",
+       subtitle = paste("Predictions for the next", future_days, "days"),
+       x = "Days Since First Case",
+       y = "Total Cases") +
+  theme_minimal() +
+  theme(legend.position = "none") +  # Remove legend for simplicity
+  annotation_custom(
+    grob = textGrob(
+      label = paste("R² =", round(R2, 4), 
+                    "\nRMSE =", round(RMSE, 2), 
+                    "\nMAE =", round(MAE, 2), 
+                    "\nCV R² =", round(cv_metrics_avg["R2"], 4), 
+                    "\nCV RMSE =", round(cv_metrics_avg["RMSE"], 2), 
+                    "\nCV MAE =", round(cv_metrics_avg["MAE"], 2)),
+      gp = gpar(fontsize = 10)
+    ),
+    xmin = 3050, xmax = 300, ymin = 1000, ymax = 25000  # Adjust the position of the annotation
+  )
+
+
+
+```
+
+From a quick visual inspection, the fit of the curve to total cases of COVID-19 in the province is nearly ideal. This is backed up by an $R^2$ value of 0.9998, very close to 1, indicating that the model is an excellent fit for the data. The root mean squared error (RMSE) is 380.26, relatively low when considered against the scale of total case counts; similarly the mean average error (MAE) is also low.
+
+With respect to cross validation, CV $R^2$ of 0.9864, indicating that the model performs well across different folds. The CV RMSE is considerably higher than the overall RMSE however, indicating that the model might suffer from uneven performance across different subsets of the data. Similarly the CV MAE is also higher than the overall MAE, indicating that the model is more accurate on the full data set than on different subsets of it.
+
+Finally, the results of the Breusch-Pagan test confirm that there is no major evidence of heteroscedasticity. A residuals plot should always be examined to confirm or deny this.
+
+The blue region, after the 1600 day mark, indicates where the model has predicted the total number of cases for the next 365 days. This demonstrates the model's ability to provide future forecasting based on little more than a total daily case count.
+
+### Residuals Plot
+
+```{r}
+residuals <- df$totalcases - df$fitted_cases
+# Create the residuals plot using a color-blind friendly palette from RColorBrewer
+ggplot(df, aes(x = days, y = residuals)) +
+  geom_point(color = brewer.pal(3, "Dark2")[1]) +  # Use the first color from Set2 palette for the points
+  geom_hline(yintercept = 0, linetype = "dashed", color = brewer.pal(3, "Dark2")[2]) +  # Use the second color for the reference line
+  labs(title = str_wrap("Residuals Plot: Random Forest Model",width=50),
+       x = "Days Since First Case",
+       y = "Residuals (Observed - Fitted)") +
+  theme_minimal()
+
+```
+
+The residuals are tightly clustered about the zero line with very little variation, save for the period from about 600-800 days, where there is a wide spread across the zero line. This coincides with the period of most rapid growth of COVID-19 in the province; the model may be struggling to capture this rapid change. Apart from that, however, the results of the residuals plot are excellent; there are no obvious patterns or spreading out beyond the 600-800 day mark. The model is performing well and there is no evidence of heteroscedasticity.
+
+# Conclusion
+
+We have evaluated the effectiveness of the random forest model in its ability to describe and predict the progression of a COVID-19 outbreak, using data recorded for Newfoundland and Labrador, Canada. The random forest model provides an excellent basis on which the progression of COVID-19 in the province can be described and predicted. Its strengths in modelling outbreaks of the disease may be summarized as follows:
+
+- COVID-19 data often exhibits complex, non-linear relationships between variables. The random forest model is able to handle this complexity through its use of a collection of decision trees.
+
+- COVID-19 data is often large and complex in its own right, particularly when factors like geography, testing rates and vaccination are taken into consideration. The random forest model is particularly well suited to such data sets, as it "can handle high-dimensional data with many predictors and complex interactions."<sup>1</sup>
+
+- Random forest makes use of multiple decision trees using different subsets of the data, averaging their predictions. This helps to generalize the model and avoid the problem of overfitting.
+
+- Random forest has a built-in method for evaluating feature importance. This is critical in the analysis of COVID-19, as it allows for one to identify which variables (e.g. government interventions, vaccinations) are most important in predicting the outcomes (in this case, total case count).
+
+- COVID-19 data is often less than ideal in form, containing missing values due to incomplete reporting or other factors. Random forest is, by nature, less sensitive to this issue. It makes use of "surrogate splits in decision trees when data for a particular feature is unavailable."<sup>1</sup>
+
+- Random forest is capable of handling both continuous and categorical variables. This is useful as COVID-19 data can often contain a variety of features, both categorical and continuous. Random forest can handle both of these types without any additional pre-processing.
+
+- Random forest is particularly good at making predictions based on historical data. It can make future predictions based on such data, critical for intervention and planning strategies. In addition, it is capable of capturing the sudden shift in trends that can often occur in an outbreak of the disease (e.g. the arrival of a new variant in the province).
+
+- Irregularities or sudden spikes in cases can interfere with the predictions of a single model. The "ensemble" approach of random forest means that noise and outliers are effectively mitigated, important when dealing with COVID-19 data.
+
+- Random forest is highly scalable; it can handle large data sets efficiently.
+
+- Many factors interact with each other in a COVID-19 outbreak, such as lockdown measures, vaccination rates and population density. Random forest is good at detecting complex interactions between features; in addition, these features do not need to be explicitly specified in the model.
+
+In short, the random forest model is flexible, robust and scalable, three critical features which make it an excellent choice in modelling and predicting the progression of a COVID-19 outbreak. In reality, no one statistical model is used in describing and predicting an outbreak of the disease; there are too many complex dynamics and factors to be considered. Despite this, the random forest has proven itself adept at describing and predicting the progression of COVID-19 in Newfoundland and Labrador.
+
+# References
+
+<sup>1</sup> - OpenAI. (2025). ChatGPT (January 16 version) [Large language model]. https://chat.openai.com/chat
