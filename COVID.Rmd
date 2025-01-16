@@ -172,7 +172,7 @@ We have evaluated the effectiveness of the random forest model in its ability to
 
 - Many factors interact with each other in a COVID-19 outbreak, such as lockdown measures, vaccination rates and population density. Random forest is good at detecting complex interactions between features; in addition, these features do not need to be explicitly specified in the model.
 
-In short, the random forest model is flexible, robust and scalable, three critical features which make it an excellent choice in modelling and predicting the progression of a COVID-19 outbreak. In reality, no one statistical model is used in describing and predicting an outbreak of the disease; there are too many complex dynamics and factors to be considered. Despite this, the random forest has proven itself adept at describing and predicting the progression of COVID-19 in Newfoundland and Labrador.
+In short, the random forest model is flexible, robust and scalable, three critical features which make it an excellent choice in modelling and predicting the progression of a COVID-19 outbreak. In reality, no one statistical model is used in describing and predicting an outbreak of the disease; there are too many complex dynamics and factors to be considered. Despite this, the random forest model has proven itself adept at describing and predicting the progression of COVID-19 in Newfoundland and Labrador.
 
 # References
 
