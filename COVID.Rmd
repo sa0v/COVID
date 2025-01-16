@@ -131,7 +131,7 @@ From a quick visual inspection, the fit of the curve to total cases of COVID-19 
 
 With respect to cross validation, CV $R^2$ is close to 1, indicating that the model performs well across different folds. The CV RMSE is considerably higher than the overall RMSE however, indicating that the model might suffer from uneven performance across different subsets of the data. Similarly the CV MAE is also higher than the overall MAE, indicating that the model is more accurate on the full data set than on different subsets of it.
 
-The blue region, after the 1600 day mark, indicates where the model has predicted the total number of cases for the next 365 days. This demonstrates the model's ability to provide future forecasting based on little more than a total daily case count.
+The blue region, after the 1600 day mark, indicates where the model has predicted the total number of cases for the next 365 days. This demonstrates the model's ability to provide future forecasting based on little more than a total daily case count. The model predicts a "plateau" for the total case count, beyond which the number of cases will not grow. In truth there would continue to be new reported cases of COVID-19 (as long as the disease is still circulating), so this plateau would not be perfectly flat, but the general trend is followed; case numbers are beginning to stabilize.
 
 Finally, the results of the Breusch-Pagan test confirm that there is no major evidence of heteroscedasticity. A residuals plot should always be examined to confirm or deny this.
 
