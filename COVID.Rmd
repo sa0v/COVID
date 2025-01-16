@@ -123,9 +123,9 @@ ggplot(df_combined, aes(x = days, y = totalcases)) +
 
 ```
 
-From a quick visual inspection, the fit of the curve to total cases of COVID-19 in the province is nearly ideal. This is backed up by an $R^2$ value of 0.9998, very close to 1, indicating that the model is an excellent fit for the data. The root mean squared error (RMSE) is 380.26, relatively low when considered against the scale of total case counts; similarly the mean average error (MAE) is also low.
+From a quick visual inspection, the fit of the curve to total cases of COVID-19 in the province is nearly ideal. This is backed up by a high $R^2$ value, very close to 1, indicating that the model is an excellent fit for the data. The root mean squared error (RMSE) is relatively low when considered against the scale of total case counts; similarly the mean average error (MAE) is also low.
 
-With respect to cross validation, CV $R^2$ of 0.9864, indicating that the model performs well across different folds. The CV RMSE is considerably higher than the overall RMSE however, indicating that the model might suffer from uneven performance across different subsets of the data. Similarly the CV MAE is also higher than the overall MAE, indicating that the model is more accurate on the full data set than on different subsets of it.
+With respect to cross validation, CV $R^2$ is close to 1, indicating that the model performs well across different folds. The CV RMSE is considerably higher than the overall RMSE however, indicating that the model might suffer from uneven performance across different subsets of the data. Similarly the CV MAE is also higher than the overall MAE, indicating that the model is more accurate on the full data set than on different subsets of it.
 
 Finally, the results of the Breusch-Pagan test confirm that there is no major evidence of heteroscedasticity. A residuals plot should always be examined to confirm or deny this.
 
