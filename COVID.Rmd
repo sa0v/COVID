@@ -42,9 +42,6 @@ variants_df$variant <- factor(variants_df$variant, levels = variants_df %>%
                       arrange(desc(median)) %>% 
                       pull(variant))
 
-# Calculate max_days
-max_days <- max(variants_df$days, na.rm = TRUE)
-
 # Plotting the boxplots sorted by median proportions
 ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = variant)) +
   geom_boxplot() + 
