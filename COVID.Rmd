@@ -9,7 +9,107 @@ output:
 ---
 # Introduction
 
-This [RStudio](https://global.rstudio.com/categories/rstudio-ide/) notebook studies a data set published by **Health Canada** on the total number of cases and deaths due to COVID-19. It will be used in this case to study the progression of the disease in Newfoundland and Labrador. The intention of the notebook is to demonstrate the effectiveness of a particular model at describing and predicting its spread.
+This [RStudio](https://global.rstudio.com/categories/rstudio-ide/) notebook studies a data sets published by **Health Canada** on the total number of cases and deaths due to COVID-19. It will be used in this case to study the progression of the disease in Newfoundland and Labrador.
+
+## What are the most common strains of COVID-19 currently circulating within the province?
+
+To answer this question, we can make use of a data set which tracks the proportion of variants of COVID-19 in the province. It is updated weekly as of writing this notebook.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(janitor)
+library(viridis)
+library(readr)
+
+# Read the data
+variants_df <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-epiSummary-variants.csv")
+
+# Clean the data and calculate days and proportions
+variants_df <- variants_df %>%
+  janitor::clean_names() %>%
+  mutate(days = as.integer(as.Date(week_of_collection, format = "%Y-%m-%d") - min(as.Date(week_of_collection, format = "%Y-%m-%d")))) %>%
+  mutate(variant = as.factor(variant)) %>%
+  # Calculate proportions and median proportions for each variant
+  group_by(variant) %>%
+  mutate(proportions = proportions / 100) %>%
+  mutate(median_proportion = median(proportions, na.rm = TRUE)) %>%
+  ungroup()
+
+# Reorder 'variant' based on median_proportion in descending order
+variants_df$variant <- factor(variants_df$variant, levels = variants_df %>% 
+                      group_by(variant) %>% 
+                      summarise(median = median(median_proportion, na.rm = TRUE)) %>% 
+                      arrange(desc(median)) %>% 
+                      pull(variant))
+
+# Calculate max_days
+max_days <- max(variants_df$days, na.rm = TRUE)
+
+# Plotting the boxplots sorted by median proportions
+ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = variant)) +
+  geom_boxplot() + 
+  labs(
+    title = "Proportion of Different COVID-19 Variants Over Time",
+    subtitle = glue::glue("Newfoundland and Labrador (Last Updated on {max(variants_df$week_of_collection)})"),
+    x = "COVID-19 Variant",
+    y = "Proportion of Variants",
+    fill = "COVID-19 Variant"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  ) +
+  scale_color_viridis_d() +
+  scale_y_continuous(labels = scales::percent)
+
+```
+
+There are at least 13 known strains of COVID-19 circulating in the province. The most common strain of the disease currently circulating is on the left, the rest have been arranged in descending order according to their median proportion. Outliers indicate sudden surges or other anomalies in case numbers for a given strain. The KP.3.1.1 strain has seen the greatest variation in its case numbers, at one point accounting for between 20% and 50% of the total cases.
+
+## How many doses of vaccines have been distributed in the province?
+
+```{r}
+# Boxplot for vaccine groups ordered by maximum value with wrapped x labels
+vaccine_df %>%
+  janitor::clean_names() %>%
+  filter(prename == "Newfoundland and Labrador") %>%
+  mutate(
+    vaccine_group = factor(vaccine_group, 
+                           levels = vaccine_df %>%
+                             filter(prename == "Newfoundland and Labrador") %>%
+                             group_by(vaccine_group) %>%
+                             summarise(max_doses = max(numtotal_totaldoses_admin, na.rm = TRUE)) %>%
+                             arrange(desc(max_doses)) %>%
+                             pull(vaccine_group)),
+    wrapped_vaccine_group = str_wrap(vaccine_group, width = 50)  # Wrap the text for x labels
+  ) %>%
+  ggplot(aes(x = wrapped_vaccine_group, y = numtotal_totaldoses_admin, color = vaccine_group)) +
+  geom_boxplot() +
+  labs(
+    title = str_wrap("Total Doses Administered by Vaccine Group", width = 50),
+    subtitle = glue::glue("Newfoundland and Labrador (Last Updated on {max(variants_df$week_of_collection)})"),
+    x = "Vaccine Group",
+    y = "Total Doses Administered"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),  # Adjusting angle for right-side up labels
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust=0.5),
+  ) +
+  scale_fill_viridis_d() +
+  scale_y_continuous(labels = scales::number) +
+  scale_color_viridis_d()
+
+
+
+
+```
+
+The Pfizer-BioNTech Comirnaty vaccines (with the original strain) have been administered in the province in the largest numbers.
 
 ## Random Forest Model
 
@@ -113,7 +213,7 @@ ggplot(df_combined, aes(x = days, y = totalcases)) +
   geom_point(data = df_combined %>% filter(is_future == TRUE), color = brewer.pal(3, "Set2")[3], size = 3) +  # Future data points in different color
   geom_line(data = df_combined %>% filter(is_future == TRUE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Set2")[3], linetype = "dotted", linewidth = 1) +  # Future predictions in dashed line
   labs(title = "COVID-19 Growth Fitted and Predicted with Random Forest Model",
-       subtitle = paste("Predictions for the next", future_days, "days"),
+       subtitle = paste("Predictions for the Next", future_days, "Days"),
        x = "Days Since First Case",
        y = "Total Cases") +
   theme_minimal() +
@@ -169,7 +269,7 @@ The residuals are tightly clustered about the zero line with very little variati
 
 # Conclusion
 
-We have evaluated the effectiveness of the random forest model in its ability to describe and predict the progression of a COVID-19 outbreak, using data recorded for Newfoundland and Labrador, Canada. The random forest model provides an excellent basis on which the progression of COVID-19 in the province can be described and predicted. Its strengths in modelling outbreaks of the disease may be summarized as follows:
+We have provided a general picture of the number of cases of different variants of COVID-19 in Newfoundland and Labrador, Canada. We have also examined the number and commercial name of vaccines distributed in the province. Finally, we have evaluated the effectiveness of the random forest model in its ability to describe and predict the progression of the disease in the province. The random forest model provides an excellent basis on which this progression can be described and predicted. Its strengths in modelling outbreaks of the disease may be summarized as follows:
 
 - COVID-19 data often exhibits complex, non-linear relationships between variables. The random forest model is able to handle this complexity through its use of a collection of decision trees.
 
