@@ -214,7 +214,7 @@ ggplot(df_combined, aes(x = days, y = totalcases)) +
   geom_point(data = df_combined %>% filter(is_future == TRUE), color = brewer.pal(3, "Set2")[3], size = 3) +  # Future data points in different color
   geom_line(data = df_combined %>% filter(is_future == TRUE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Set2")[3], linetype = "dotted", linewidth = 1) +  # Future predictions in dashed line
   labs(title = "COVID-19 Growth Fitted and Predicted with Random Forest Model",
-       subtitle = paste("Predictions for the Next", future_days, "Days"),
+       subtitle = paste("Predictions for the Next", future_days, "Days in Blue"),
        x = "Days Since First Case",
        y = "Total Cases") +
   theme_minimal() +
