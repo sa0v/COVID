@@ -1,6 +1,6 @@
 ---
 title: "COVID-19 in Newfoundland and Labrador"
-subtitle: "Analysis of the Random Forest Model"
+subtitle: "Analysis and Modelling"
 author: "John W"
 date: "`r Sys.Date()`"
 output:
@@ -71,10 +71,13 @@ There are at least 13 known strains of COVID-19 circulating in the province. The
 ## How many doses of vaccines have been distributed in the province?
 
 ```{r}
+vaccine_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv")
+
 # Boxplot for vaccine groups ordered by maximum value with wrapped x labels
 vaccine_df %>%
   janitor::clean_names() %>%
   filter(prename == "Newfoundland and Labrador") %>%
+  filter(vaccine_group != "Total"  & vaccine_group != "Unknown") |>
   mutate(
     vaccine_group = factor(vaccine_group, 
                            levels = vaccine_df %>%
