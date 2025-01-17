@@ -12,7 +12,7 @@ output:
 
 This [RStudio](https://global.rstudio.com/categories/rstudio-ide/) notebook studies a number of data sets published by **Health Canada** on COVID-19 cases, vaccinations and variants. They will be used in this case to study the progression of the disease in Newfoundland and Labrador.
 
-## What are the most common strains of COVID-19 currently circulating within the province?
+# What are the most common strains of COVID-19 currently circulating within the province?
 
 To answer this question, we can make use of a data set which tracks the proportion of variants of COVID-19 in the province. It is updated weekly as of writing this notebook.
 
@@ -67,7 +67,7 @@ ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = v
 
 There are at least 13 known strains of COVID-19 circulating in the province. The most common strain of the disease currently circulating is on the left, the rest have been arranged in descending order according to their median proportion. Outliers indicate sudden surges or other anomalies in case numbers for a given strain. The KP.3.1.1 strain has seen the greatest variation in its case numbers, at one point accounting for between 20% and 50% of the total cases.
 
-## How many doses of vaccines have been distributed in the province?
+# How many doses of vaccines have been distributed in the province?
 
 ```{r}
 vaccine_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv")
@@ -113,11 +113,11 @@ vaccine_df %>%
 
 The Pfizer-BioNTech Comirnaty vaccines (with the original strain) have been administered in the province in the largest numbers.
 
-## Random Forest Model
+# Random Forest Model
 
 To study the progression of COVID-19 in the province, we will make use of the **random forest model.** The random forest model is an "ensemble machine learning algorithm that combines multiple decision trees to improve the accuracy, robustness, and generalization of predictions. It is widely used for both regression and classification tasks and is particularly effective for handling large, complex datasets with a variety of input features."<sup>1</sup>
 
-### Fitted Curve
+## Fitted Curve
 
 ```{r}
 # Load necessary libraries
@@ -250,7 +250,7 @@ The blue region, after the 1600 day mark, indicates where the model has predicte
 
 Finally, the results of the Breusch-Pagan test suggest that there is no significant evidence of heteroscedasticity in the residuals. We should examine a residuals plot to be sure that there are no obvious patterns.
 
-### Residuals Plot
+## Residuals Plot
 
 ```{r}
 residuals <- df$totalcases - df$fitted_cases
