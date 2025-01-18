@@ -2,7 +2,7 @@
 title: "COVID-19 in Newfoundland and Labrador"
 subtitle: "Analysis and Modelling"
 author: "John W"
-date: "1-17-2025"
+date: "`r Sys.Date()`"
 output:
   html_document:
     df_print: paged
@@ -25,7 +25,7 @@ library(randomForest)
 library(ggthemes)
 library(RColorBrewer)
 library(glue)
-library(stringr)
+library(stringr)  # For text wrapping
 
 # Read the data
 variants_df <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-epiSummary-variants.csv")
@@ -123,15 +123,6 @@ To study the progression of COVID-19 in the province, we will make use of the **
 ## Plots
 
 ```{r}
-# Load necessary libraries
-library(tidyverse)
-library(caret)
-library(randomForest)
-library(ggthemes)
-library(RColorBrewer)
-library(glue)  # For formatting the subtitle text
-library(stringr)  # For text wrapping
-
 # Load and prepare the data
 data <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
 
@@ -221,12 +212,13 @@ ggplot() +
   geom_line(data = full_data, aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[2], linewidth=1) +  # Fitted curve
   geom_point(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[3], size = 3) +  # Predictions for next 365 days as blue points
   labs(
-    title = "Fitted Curve for Full Data",
+    title = str_wrap("COVID-19 in Newfoundland and Labrador Fitted and Predicted (Predictions for the Next 365 Days in Blue)",width=50),
     x = "Days", y = "Sqrt(Total Cases)",
     subtitle = wrapped_subtitle
   ) +
   theme_minimal() +
   theme(
+    plot.title = element_text(hjust=0.5),
     plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
   )
 
