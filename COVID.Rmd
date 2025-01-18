@@ -2,7 +2,7 @@
 title: "COVID-19 in Newfoundland and Labrador"
 subtitle: "Analysis and Modelling"
 author: "John W"
-date: "`r Sys.Date()`"
+date: "1-17-2025"
 output:
   html_document:
     df_print: paged
@@ -20,6 +20,12 @@ To answer this question, we can make use of a data set which tracks the proporti
 library(tidyverse)
 library(janitor)
 library(viridis)
+library(caret)
+library(randomForest)
+library(ggthemes)
+library(RColorBrewer)
+library(glue)
+library(stringr)
 
 # Read the data
 variants_df <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-epiSummary-variants.csv")
@@ -64,7 +70,7 @@ ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = v
 
 There are at least 13 known strains of COVID-19 circulating in the province. The most common strain of the disease currently circulating is on the left, the rest have been arranged in descending order according to their median proportion. Outliers indicate sudden surges or other anomalies in case numbers for a given strain. The KP.3.1.1 strain has seen the greatest variation in its case numbers, at one point accounting for between 20% and 50% of the total cases.
 
-# What are the most commonly administered vaccines in the province?
+# Which vaccines are most commonly administered in the province?
 
 ```{r}
 vaccine_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv")
@@ -114,179 +120,234 @@ The Pfizer-BioNTech Comirnaty vaccines (with the original strain) have been admi
 
 To study the progression of COVID-19 in the province, we will make use of the **random forest model.** The random forest model is an "ensemble machine learning algorithm that combines multiple decision trees to improve the accuracy, robustness, and generalization of predictions. It is widely used for both regression and classification tasks and is particularly effective for handling large, complex datasets with a variety of input features."<sup>1</sup>
 
-## Fitted Curve
+## Plots
 
 ```{r}
 # Load necessary libraries
 library(tidyverse)
-library(randomForest)
 library(caret)
+library(randomForest)
 library(ggthemes)
 library(RColorBrewer)
+library(glue)  # For formatting the subtitle text
+library(stringr)  # For text wrapping
 
 # Load and prepare the data
 data <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
 
-df <- data |>
-  filter(prname == "Newfoundland and Labrador") |>
+df <- data %>%
+  filter(prname == "Newfoundland and Labrador") %>%
   mutate(
-    totalcases = as.numeric(totalcases), 
+    totalcases = as.numeric(totalcases),
     days = as.integer(as.Date(date, format = "%Y-%m-%d") - min(as.Date(date, format = "%Y-%m-%d"))),  # Calculate days since the first case
     sqrt_totalcases = sqrt(totalcases)  # Square root transformation of the totalcases
-  ) |>
-  drop_na(sqrt_totalcases) |> # Drop NA values for the transformed variable
-  filter(!is.na(totalcases) & !is.infinite(totalcases)) |>
+  ) %>%
+  drop_na(sqrt_totalcases) %>% # Drop NA values for the transformed variable
+  filter(!is.na(totalcases) & !is.infinite(totalcases)) %>%
   filter(totalcases > 0)
 
-# Split the data into training and testing sets
+# Prepare feature matrix (X) and target variable (y)
+X <- df %>%
+  select(days) %>%
+  as.matrix()
+
+y <- df$sqrt_totalcases  # Target variable
+
+# Convert X and y to numeric matrix and vector, respectively
+X <- as.matrix(X)  # Ensure X is a matrix
+y <- as.numeric(y)  # Ensure y is a numeric vector
+
+# Split the data into training and test sets
 set.seed(123)
-train_index <- createDataPartition(df$sqrt_totalcases, p = 0.8, list = FALSE)
-train_data <- df[train_index, ]
-test_data <- df[-train_index, ]
+train_index <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[train_index, , drop = FALSE]  # Ensure X_train is a matrix
+y_train <- y[train_index]
+X_test <- X[-train_index, , drop = FALSE]  # Ensure X_test is a matrix
+y_test <- y[-train_index]
 
-# Train a Random Forest model on the full training data
-rf_model_full <- randomForest(sqrt_totalcases ~ days, data = train_data, ntree = 50)
+# Convert to data frame for randomForest training
+train_df <- data.frame(days = X_train, sqrt_totalcases = y_train)
+test_df <- data.frame(days = X_test, sqrt_totalcases = y_test)
 
-# Predict on the full data
-df$fitted_sqrt_cases_rf <- predict(rf_model_full, newdata = df)
-df$fitted_cases_rf <- df$fitted_sqrt_cases_rf^2  # Convert from sqrt back to total cases
+# Train the Random Forest model using caret
+rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = 3, mtry = 1, importance = TRUE)
 
-# Generate future predictions for the next 365 days
-future_days <- 365  # Number of days to predict ahead
-last_day <- max(df$days)  # Last observed day in the dataset
-future_dates <- data.frame(days = (last_day + 1):(last_day + future_days))  # Create future days
+# Print model summary
+print(rf_model)
 
-future_sqrt_cases_rf <- predict(rf_model_full, newdata = future_dates)
-future_cases_rf <- future_sqrt_cases_rf^2  # Convert from sqrt back to total cases (square of sqrt)
+# Make predictions on the test set
+y_pred <- predict(rf_model, newdata = test_df)
 
-# Create a data frame for future predictions
-future_df_rf <- data.frame(days = future_dates$days, predicted_cases = future_cases_rf)
+# Evaluate the model on the test set
+rmse <- sqrt(mean((y_test - y_pred)^2))
+mae <- mean(abs(y_test - y_pred))
+r2 <- 1 - sum((y_test - y_pred)^2) / sum((y_test - mean(y_test))^2)
 
-# Combine the future predictions with the actual historical data for plotting
-df_combined_rf <- bind_rows(
-  df %>% mutate(predicted_cases = fitted_cases_rf, is_future = FALSE),  # Historical data with fitted values
-  future_df_rf %>% mutate(totalcases = predicted_cases, is_future = TRUE)  # Future predictions with predicted cases
+# Cross-validation with caret
+cv_model <- train(
+  sqrt_totalcases ~ days, 
+  data = train_df, 
+  method = "rf", 
+  trControl = trainControl(method = "cv", number = 5),  # 5-fold cross-validation
+  tuneGrid = expand.grid(mtry = 1),  # Adjust this grid for hyperparameter tuning
+  ntree = 3
 )
 
-# Calculate performance metrics for training and testing data
-train_preds <- predict(rf_model_full, newdata = train_data)
-test_preds <- predict(rf_model_full, newdata = test_data)
+# Cross-validation evaluation metrics
+cv_rmse <- min(cv_model$resample$RMSE)
+cv_mae <- min(cv_model$resample$MAE)
+cv_r2 <- max(cv_model$resample$Rsquared)
 
-# RMSE
-train_rmse <- sqrt(mean((train_data$sqrt_totalcases - train_preds)^2))
-test_rmse <- sqrt(mean((test_data$sqrt_totalcases - test_preds)^2))
-
-# MAE
-train_mae <- mean(abs(train_data$sqrt_totalcases - train_preds))
-test_mae <- mean(abs(test_data$sqrt_totalcases - test_preds))
-
-# R²
-train_r2 <- 1 - sum((train_data$sqrt_totalcases - train_preds)^2) / sum((train_data$sqrt_totalcases - mean(train_data$sqrt_totalcases))^2)
-test_r2 <- 1 - sum((test_data$sqrt_totalcases - test_preds)^2) / sum((test_data$sqrt_totalcases - mean(test_data$sqrt_totalcases))^2)
-
-# Cross-validation metrics (using 5-fold cross-validation)
-cv_results <- train(sqrt_totalcases ~ days, data = train_data, method = "rf", trControl = trainControl(method = "cv", number = 5))
-
-cv_rmse <- cv_results$results$RMSE
-cv_r2 <- cv_results$results$Rsquared
-cv_mae <- cv_results$results$MAE
-
-# Create the performance metrics text
-performance_text <- paste(
-  "Train RMSE: ", round(train_rmse, 2), "\n",
-  "Test RMSE: ", round(test_rmse, 2), "\n",
-  "Train MAE: ", round(train_mae, 2), "\n",
-  "Test MAE: ", round(test_mae, 2), "\n",
-  "Train R²: ", round(train_r2, 2), "\n",
-  "Test R²: ", round(test_r2, 2), "\n",
-  "CV RMSE: ", round(mean(cv_rmse), 2), "\n",
-  "CV R²: ", round(mean(cv_r2), 2), "\n",
-  "CV MAE: ", round(mean(cv_mae), 2)
+# Create the subtitle with performance metrics
+subtitle_text <- glue(
+  "Test RMSE: {round(rmse, 2)} | Test MAE: {round(mae, 2)} | Test R²: {round(r2, 2)} | ",
+  "CV RMSE: {round(cv_rmse, 2)} | CV MAE: {round(cv_mae, 2)} | CV R²: {round(cv_r2, 2)}"
 )
 
-# Plot the COVID-19 Growth Fitted and Predicted with Random Forest
-ggplot(df_combined_rf, aes(x = days, y = totalcases)) +
-  geom_point(data = df_combined_rf %>% filter(is_future == FALSE), color = brewer.pal(3, "Dark2")[1], size = 3) +  # Historical data points
-  geom_line(data = df_combined_rf %>% filter(is_future == FALSE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Dark2")[2], linewidth = 1) +  # Fitted curve for historical data
-  geom_point(data = df_combined_rf %>% filter(is_future == TRUE), color = brewer.pal(3, "Set2")[3], size = 3) +  # Future data points in different color
-  geom_line(data = df_combined_rf %>% filter(is_future == TRUE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Set2")[3], linetype = "dotted", linewidth = 1) +  # Future predictions in dashed line
+# Wrap the subtitle text to fit within the plot using str_wrap
+wrapped_subtitle <- str_wrap(subtitle_text, width = 80)
+
+# Fitted curve for the full data
+full_data <- data.frame(days = df$days, sqrt_totalcases = df$sqrt_totalcases)
+full_data$predictions <- predict(rf_model, newdata = full_data)
+
+# Extend the range of days for prediction (next 365 days)
+future_days <- data.frame(days = (max(df$days) + 1):(max(df$days) + 365))
+future_predictions <- predict(rf_model, newdata = future_days)
+
+# Plot 1: Fitted Curve for Full Data with Performance Metrics in the Subtitle
+ggplot() +
+  geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = brewer.pal(3,"Dark2")[1], size=3) +  # Actual data points
+  geom_line(data = full_data, aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[2], linewidth=1) +  # Fitted curve
+  geom_point(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[3], size = 3) +  # Predictions for next 365 days as blue points
   labs(
-    title = "COVID-19 Growth Fitted and Predicted with Random Forest Model",
-    subtitle = paste("Predictions for the Next", future_days, "Days in Blue"),
-    x = "Days Since First Case",
-    y = "Total Cases"
+    title = "Fitted Curve for Full Data",
+    x = "Days", y = "Sqrt(Total Cases)",
+    subtitle = wrapped_subtitle
   ) +
   theme_minimal() +
   theme(
-    legend.position = "none",
-    plot.title = element_text(hjust = 0.5),  # Center the title
     plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
-  ) +
-  annotate(
-    "text", 
-    x = max(df_combined_rf$days) - 10, 
-    y = max(df_combined_rf$totalcases) * 0.30, 
-    label = performance_text, 
-    hjust = 1, 
-    size = 4, 
-    color = "black", 
   )
 
+# Plot 2: Learning Curves (Training and Test RMSE)
+# Evaluate learning curve over different ntree values
+ntree_values <- seq(1, 3, by = 1)
+train_rmse <- sapply(ntree_values, function(ntree) {
+  rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = ntree, mtry = 1)
+  sqrt(mean((y_train - predict(rf_model, newdata = train_df))^2))
+})
+test_rmse <- sapply(ntree_values, function(ntree) {
+  rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = ntree, mtry = 1)
+  sqrt(mean((y_test - predict(rf_model, newdata = test_df))^2))
+})
 
-
-```
-
-From a quick visual inspection, the fit of the curve to total cases of COVID-19 in the province is nearly ideal. This is backed up by a high $R^2$ value, very close to 1, indicating that the model is an excellent fit for the data. The root mean squared error (RMSE) is relatively low when considered against the scale of total case counts; similarly the mean average error (MAE) is also low.
-
-With respect to cross validation, CV $R^2$ is close to 1, indicating that the model performs well across different folds. The CV RMSE is considerably higher than the overall RMSE however, indicating that the model might suffer from uneven performance across different subsets of the data. Similarly the CV MAE is also higher than the overall MAE, indicating that the model is more accurate on the full data set than on different subsets of it.
-
-The blue region, after the 1600 day mark, indicates where the model has predicted the total number of cases for the next 365 days. This demonstrates the model's ability to provide future forecasting based on little more than a total daily case count. The model predicts a "plateau" for the total case count, beyond which the number of cases will not grow. In truth there would continue to be new reported cases of COVID-19 (as long as the disease is still circulating), so this plateau would not be perfectly flat, but the general trend is followed; case numbers are beginning to stabilize.
-
-```{r}
-# Generate learning curves by training on subsets of the data
-train_sizes <- seq(1, nrow(train_data), by = 5)  # Use training sizes from 1 to full training set size
-train_rmse_curve <- numeric(length(train_sizes))
-test_rmse_curve <- numeric(length(train_sizes))
-
-# Generate learning curves by training on subsets of the data
-for (i in seq_along(train_sizes)) {
-  subset_train_data <- train_data[1:train_sizes[i], ]
-  
-  # Fit Random Forest on the subset of training data
-  rf_model <- randomForest(sqrt_totalcases ~ days, data = subset_train_data, ntree = 50)
-  
-  # Predict on training and testing data
-  train_preds <- predict(rf_model, newdata = subset_train_data)
-  test_preds <- predict(rf_model, newdata = test_data)
-  
-  # Calculate RMSE for training and testing data
-  train_rmse_curve[i] <- sqrt(mean((subset_train_data$sqrt_totalcases - train_preds)^2))
-  test_rmse_curve[i] <- sqrt(mean((test_data$sqrt_totalcases - test_preds)^2))
-}
-
-# Create a data frame for learning curve data
+# Create learning curve data frame
 learning_curve_data <- data.frame(
-  Train_Size = rep(train_sizes, each = 2),
-  RMSE = c(train_rmse_curve, test_rmse_curve),
-  Data = rep(c("Training", "Testing"), times = length(train_sizes))
+  ntree = rep(ntree_values, 2),
+  rmse = c(train_rmse, test_rmse),
+  dataset = rep(c("Training", "Test"), each = length(ntree_values))
 )
 
-# Plot the learning curves as lines
-ggplot(learning_curve_data, aes(x = Train_Size, y = RMSE, color = Data)) +
-  geom_line(size = 1) +  # Line for learning curves
-  geom_point(size = 2) +  # Points for each RMSE value
+# Plot learning curves
+ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
+  geom_line() +
+  geom_point() +
   labs(
-    title = "Learning Curves: RMSE for Training and Testing Data",
-    x = "Training Set Size",
-    y = "RMSE",
-    color="Legend"
+    title = "Learning Curves for Random Forest",
+    x = "Number of Trees (ntree)",
+    y = "Root Mean Squared Error (RMSE)",
+    subtitle = "Training vs. Test Performance for Different Numbers of Trees"
   ) +
   theme_minimal() +
-  theme(legend.position = "right")
+  scale_color_manual(values = c(brewer.pal(3,"Dark2")[1], brewer.pal(3,"Dark2")[2])) +
+  theme(legend.title = element_blank())
+
+# Generate synthetic data for fitting the curve (logistic growth with noise)
+set.seed(123)
+days_synthetic <- 1:100
+totalcases_synthetic <- 100 * (1 / (1 + exp(-0.1 * (days_synthetic - 50)))) + rnorm(100, 0, 10)  # Logistic growth with noise
+df_synthetic <- data.frame(days = days_synthetic, totalcases = totalcases_synthetic)
+
+# Prepare synthetic data feature matrix and target variable
+X_synthetic <- df_synthetic %>%
+  select(days) %>%
+  as.matrix()
+
+y_synthetic <- df_synthetic$totalcases  # Target variable for synthetic data
+
+# Train Random Forest on synthetic data
+train_df_synthetic <- data.frame(days = X_synthetic, totalcases = y_synthetic)
+
+# Train the Random Forest model for synthetic data
+rf_model_synthetic <- randomForest(totalcases ~ days, data = train_df_synthetic, ntree = 3, mtry = 1)
+
+# Make predictions for the synthetic data
+synthetic_pred <- predict(rf_model_synthetic, newdata = train_df_synthetic)
+
+# Evaluate the model on synthetic data
+rmse_synthetic <- sqrt(mean((y_synthetic - synthetic_pred)^2))
+mae_synthetic <- mean(abs(y_synthetic - synthetic_pred))
+r2_synthetic <- 1 - sum((y_synthetic - synthetic_pred)^2) / sum((y_synthetic - mean(y_synthetic))^2)  # Calculate R²
+
+# Cross-validation for synthetic data
+cv_model_synthetic <- train(
+  totalcases ~ days, 
+  data = train_df_synthetic, 
+  method = "rf", 
+  trControl = trainControl(method = "cv", number = 5),  # 5-fold cross-validation
+  tuneGrid = expand.grid(mtry = 1),  # Adjust this grid for hyperparameter tuning
+  ntree = 3
+)
+
+# Cross-validation evaluation metrics for synthetic data
+cv_rmse_synthetic <- min(cv_model_synthetic$resample$RMSE)
+cv_mae_synthetic <- min(cv_model_synthetic$resample$MAE)
+cv_r2_synthetic <- max(cv_model_synthetic$resample$Rsquared)
+
+# Create the subtitle for synthetic data with performance metrics
+subtitle_text_synthetic <- glue(
+  "Test RMSE: {round(rmse_synthetic, 2)} | Test MAE: {round(mae_synthetic, 2)} | Test R²: {round(r2_synthetic, 2)} | ",
+  "CV RMSE: {round(cv_rmse_synthetic, 2)} | CV MAE: {round(cv_mae_synthetic, 2)} | CV R²: {round(cv_r2_synthetic, 2)}"
+)
+
+# Wrap the subtitle text for synthetic data
+wrapped_subtitle_synthetic <- str_wrap(subtitle_text_synthetic, width = 80)
+
+# Plot: Fitted Curve for Synthetic Data with Performance Metrics in the Subtitle
+ggplot() +
+  geom_point(data = df_synthetic, aes(x = days, y = totalcases), color = brewer.pal(3,"Dark2")[1],size=3) +  # Actual synthetic data points
+  geom_line(data = df_synthetic, aes(x = days, y = synthetic_pred), color = brewer.pal(3,"Dark2")[2], linewidth = 1) +  # Fitted curve for synthetic data
+  labs(
+    title = "Fitted Curve for Synthetic Data",
+    x = "Days", y = "Total Cases",
+    subtitle = wrapped_subtitle_synthetic
+  ) +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
+  ) +
+  scale_color_manual(values = c("black", "green"))
 
 ```
-  
-As a residuals plot is not as useful in evaluating the performance of a decision-tree based model like the random forest model, we have instead generated a learning curves plot. The plot shows that at around the 100 mark the training and test RMSE are at their highest point, but they very rapidly decrease, almost in unison, converging near the zero line. In summary, the model rapidly improves and generalizes well with more training data.
+
+### Fitted Curve Plot
+
+The first plot in the series shows a curve, predicted by the model, fitted to the full data set. The RMSE is low, indicating that the model's predictions are close to that of the observed values. The MAE is also low, suggesting a good model fit with very small errors. The $R^2$ value is close to one, indicating a nearly ideal fit.
+
+With respect to cross-validation metrics, the CV RMSE is slightly worse than that of the test RMSE, suggesting that the model performs slightly worse on different subsets of the data. Apart from that, it is quite reasonably low in value. The CV MAE is also low, indicating that the model performed well across folds, but was slightly less accurate on the test data. The CV $R^2$ is high; the model explains nearly all of the variability in the test data.
+
+### Learning Curves
+
+The learning curves plot "is a graphical representation that shows how a machine learning model's performance improves as it is trained on more data or with different model configurations (such as the number of trees in a [random forest], or the number of training iterations in other models)."<sup>1</sup> It is useful in diagnosing issues with a model such as overfitting and underfitting, as well as for evaluating the model's ability to generalize.
+
+The learning curves plot in this case indicates that at only 1 tree, the model is underfitting the data. As the number of trees are increased to 2, there is a significant decrease in both test and training RMSE. This is consistent with better generalization and less underfitting. At 3 trees, both test and training RMSE stabilize at roughly the same level. This suggests that increasing the number of trees beyond 3 does not significantly improve the model's performance.
+
+### Synthetic Data
+
+How does the model perform against new and unseen data? The synthetic data plot and fitted curve simulates this condition. It is obvious from the performance metrics that despite the synthetic data being entirely new to the model, it performs reasonably well. The test $R^2$ is high, indicating a good fit to the synthetic data. The test RMSE is conversely low; this is an indication that the model's prediction errors are quite reasonable when the scale of total case numbers is taken into account. The test MAE is similarly low; the model's predictions are off by a very small amount on average.
+
+With respect to cross-validation metrics, the CV $R^2$ is also high, though slightly lower than the test $R^2.$ This suggests that while the model still performs quite well, there is a small amount of variability in its generalization to different data splits. The CV RMSE is low, though slightly higher than the test RMSE; the model experiences some fluctuation in performance across different folds of the data, but it is still a strong result. Finally, the CV MAE is low, though again slightly higher than the test MAE, suggesting some variability in the model's performance.
 
 # Conclusion
 
@@ -316,4 +377,4 @@ In short, the random forest model is flexible, robust and scalable, three critic
 
 # References
 
-<sup>1</sup> - OpenAI. (2025). ChatGPT (January 16 version) [Large language model]. https://chat.openai.com/chat
+<sup>1</sup> - OpenAI. (2025). ChatGPT (January 17 version) [Large language model]. https://chat.openai.com/chat
