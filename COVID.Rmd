@@ -261,7 +261,10 @@ ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
   ) +
   theme_minimal() +
   scale_color_manual(values = c(brewer.pal(3,"Dark2")[1], brewer.pal(3,"Dark2")[2])) +
-  theme(legend.title = element_blank())
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust=0.5),
+  )
 
 # Generate synthetic data for fitting the curve (logistic growth with noise)
 set.seed(123)
@@ -325,6 +328,7 @@ ggplot() +
   ) +
   theme_minimal() +
   theme(
+    plot.title = element_text(hjust=0.5),
     plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
   ) +
   scale_color_manual(values = c("black", "green"))
