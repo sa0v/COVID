@@ -68,7 +68,7 @@ ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = v
 
 ```
 
-There are at least 13 known strains of COVID-19 circulating in the province. The most common strain of the disease currently circulating is on the left, the rest have been arranged in descending order according to their median proportion. Outliers indicate sudden surges or other anomalies in case numbers for a given strain. The KP.3.1.1 strain has seen the greatest variation in its case numbers, at one point accounting for between 20% and 50% of the total cases.
+There are at least 13 known strains of COVID-19 circulating in the province. As of January 18, 2025, the most common strain is the XEC strain, followed by the KP.3.1.1 and MC.1 strains, making them the dominant strains for the observed period. The XEC variant is perhaps the most prominent, though this picture may change as the data set is updated. In either case, the XEC strain (as of writing) has the highest median proportion of cases and a wide interquartile range, indicating some variability in its proportions over time.
 
 # Which vaccines are most commonly administered in the province?
 
