@@ -64,7 +64,7 @@ ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = v
 
 There are at least 13 known strains of COVID-19 circulating in the province. The most common strain of the disease currently circulating is on the left, the rest have been arranged in descending order according to their median proportion. Outliers indicate sudden surges or other anomalies in case numbers for a given strain. The KP.3.1.1 strain has seen the greatest variation in its case numbers, at one point accounting for between 20% and 50% of the total cases.
 
-# How many doses of vaccines have been distributed in the province?
+# What are the most commonly administered vaccines in the province?
 
 ```{r}
 vaccine_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv")
@@ -123,8 +123,6 @@ library(randomForest)
 library(caret)
 library(ggthemes)
 library(RColorBrewer)
-library(lmtest)
-library(grid)  # For text grob
 
 # Load and prepare the data
 data <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
@@ -140,99 +138,98 @@ df <- data |>
   filter(!is.na(totalcases) & !is.infinite(totalcases)) |>
   filter(totalcases > 0)
 
-# Fit the model to the full data using Random Forest
-rf_model_full <- randomForest(sqrt_totalcases ~ days, data = df, importance = TRUE, ntree = 100)
+# Split the data into training and testing sets
+set.seed(123)
+train_index <- createDataPartition(df$sqrt_totalcases, p = 0.8, list = FALSE)
+train_data <- df[train_index, ]
+test_data <- df[-train_index, ]
 
-# Calculate fitted cases for the full data
-df$fitted_sqrt_cases <- predict(rf_model_full, newdata = df)
-df$fitted_cases <- df$fitted_sqrt_cases^2  # Transform back to total cases
+# Train a Random Forest model on the full training data
+rf_model_full <- randomForest(sqrt_totalcases ~ days, data = train_data, ntree = 50)
 
-# Generate future predictions for a given number of future days
-future_days <- 365  # You can adjust this for how many days ahead you want to predict
+# Predict on the full data
+df$fitted_sqrt_cases_rf <- predict(rf_model_full, newdata = df)
+df$fitted_cases_rf <- df$fitted_sqrt_cases_rf^2  # Convert from sqrt back to total cases
+
+# Generate future predictions for the next 365 days
+future_days <- 365  # Number of days to predict ahead
 last_day <- max(df$days)  # Last observed day in the dataset
 future_dates <- data.frame(days = (last_day + 1):(last_day + future_days))  # Create future days
 
-# Predict future total cases (after the training data)
-future_sqrt_cases <- predict(rf_model_full, newdata = future_dates)
-future_cases <- future_sqrt_cases^2  # Transform back to total cases (square of sqrt)
+future_sqrt_cases_rf <- predict(rf_model_full, newdata = future_dates)
+future_cases_rf <- future_sqrt_cases_rf^2  # Convert from sqrt back to total cases (square of sqrt)
 
 # Create a data frame for future predictions
-future_df <- data.frame(days = future_dates$days, predicted_cases = future_cases)
+future_df_rf <- data.frame(days = future_dates$days, predicted_cases = future_cases_rf)
 
 # Combine the future predictions with the actual historical data for plotting
-df_combined <- bind_rows(
-  df %>% mutate(predicted_cases = fitted_cases, is_future = FALSE),  # Historical data with fitted values
-  future_df %>% mutate(totalcases = predicted_cases, is_future = TRUE)  # Future predictions with predicted cases
+df_combined_rf <- bind_rows(
+  df %>% mutate(predicted_cases = fitted_cases_rf, is_future = FALSE),  # Historical data with fitted values
+  future_df_rf %>% mutate(totalcases = predicted_cases, is_future = TRUE)  # Future predictions with predicted cases
 )
 
-# Performance metrics for the full model
-R2 <- 1 - sum((df$totalcases - df$fitted_cases)^2) / sum((df$totalcases - mean(df$totalcases))^2)
-RMSE <- sqrt(mean((df$totalcases - df$fitted_cases)^2))
-MAE <- mean(abs(df$totalcases - df$fitted_cases))
+# Calculate performance metrics for training and testing data
+train_preds <- predict(rf_model_full, newdata = train_data)
+test_preds <- predict(rf_model_full, newdata = test_data)
 
-# K-fold Cross-validation
-k_folds <- 5
-cv_metrics <- data.frame(R2 = numeric(k_folds), RMSE = numeric(k_folds), MAE = numeric(k_folds))
-set.seed(123)
-folds <- createFolds(df$days, k = k_folds, list = TRUE)
+# RMSE
+train_rmse <- sqrt(mean((train_data$sqrt_totalcases - train_preds)^2))
+test_rmse <- sqrt(mean((test_data$sqrt_totalcases - test_preds)^2))
 
-for (i in 1:k_folds) {
-  train_indices <- folds[[i]]
-  train_data <- df[train_indices, ]
-  test_data <- df[-train_indices, ]
-  
-  rf_model <- randomForest(sqrt_totalcases ~ days, data = train_data, importance = TRUE, ntree = 100)
-  test_data$fitted_sqrt_cases <- predict(rf_model, newdata = test_data)
-  test_data$fitted_cases <- test_data$fitted_sqrt_cases^2
-  R2_fold <- 1 - sum((test_data$totalcases - test_data$fitted_cases)^2) / sum((test_data$totalcases - mean(test_data$totalcases))^2)
-  RMSE_fold <- sqrt(mean((test_data$totalcases - test_data$fitted_cases)^2))
-  MAE_fold <- mean(abs(test_data$totalcases - test_data$fitted_cases))
-  
-  cv_metrics[i, ] <- c(R2_fold, RMSE_fold, MAE_fold)
-}
+# MAE
+train_mae <- mean(abs(train_data$sqrt_totalcases - train_preds))
+test_mae <- mean(abs(test_data$sqrt_totalcases - test_preds))
 
-cv_metrics_avg <- colMeans(cv_metrics)
+# R²
+train_r2 <- 1 - sum((train_data$sqrt_totalcases - train_preds)^2) / sum((train_data$sqrt_totalcases - mean(train_data$sqrt_totalcases))^2)
+test_r2 <- 1 - sum((test_data$sqrt_totalcases - test_preds)^2) / sum((test_data$sqrt_totalcases - mean(test_data$sqrt_totalcases))^2)
 
-# Calculate residuals from Random Forest model
-df$residuals_rf <- df$totalcases - df$fitted_cases
+# Cross-validation metrics (using 5-fold cross-validation)
+cv_results <- train(sqrt_totalcases ~ days, data = train_data, method = "rf", trControl = trainControl(method = "cv", number = 5))
 
-# Fit a linear model on the residuals to check for heteroscedasticity
-lm_residuals <- lm(residuals_rf ~ days, data = df)
+cv_rmse <- cv_results$results$RMSE
+cv_r2 <- cv_results$results$Rsquared
+cv_mae <- cv_results$results$MAE
 
-# Apply the Breusch-Pagan test for heteroscedasticity
-bp_test <- bptest(lm_residuals)
+# Create the performance metrics text
+performance_text <- paste(
+  "Train RMSE: ", round(train_rmse, 2), "\n",
+  "Test RMSE: ", round(test_rmse, 2), "\n",
+  "Train MAE: ", round(train_mae, 2), "\n",
+  "Test MAE: ", round(test_mae, 2), "\n",
+  "Train R²: ", round(train_r2, 2), "\n",
+  "Test R²: ", round(test_r2, 2), "\n",
+  "CV RMSE: ", round(mean(cv_rmse), 2), "\n",
+  "CV R²: ", round(mean(cv_r2), 2), "\n",
+  "CV MAE: ", round(mean(cv_mae), 2)
+)
 
-# Extract the p-value for the Breusch-Pagan test
-bp_p_value <- bp_test$p.value
-
-# Plot the actual data, fitted curve, and future predictions with different colors
-ggplot(df_combined, aes(x = days, y = totalcases)) +
-  geom_point(data = df_combined %>% filter(is_future == FALSE), color = brewer.pal(3, "Dark2")[1], size = 3) +  # Historical data points
-  geom_line(data = df_combined %>% filter(is_future == FALSE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Dark2")[2], linewidth = 1) +  # Fitted curve for historical data
-  geom_point(data = df_combined %>% filter(is_future == TRUE), color = brewer.pal(3, "Set2")[3], size = 3) +  # Future data points in different color
-  geom_line(data = df_combined %>% filter(is_future == TRUE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Set2")[3], linetype = "dotted", linewidth = 1) +  # Future predictions in dashed line
-  labs(title = "COVID-19 Growth Fitted and Predicted with Random Forest Model",
-       subtitle = paste("Predictions for the Next", future_days, "Days in Blue"),
-       x = "Days Since First Case",
-       y = "Total Cases") +
+# Plot the COVID-19 Growth Fitted and Predicted with Random Forest
+ggplot(df_combined_rf, aes(x = days, y = totalcases)) +
+  geom_point(data = df_combined_rf %>% filter(is_future == FALSE), color = brewer.pal(3, "Dark2")[1], size = 3) +  # Historical data points
+  geom_line(data = df_combined_rf %>% filter(is_future == FALSE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Dark2")[2], linewidth = 1) +  # Fitted curve for historical data
+  geom_point(data = df_combined_rf %>% filter(is_future == TRUE), color = brewer.pal(3, "Set2")[3], size = 3) +  # Future data points in different color
+  geom_line(data = df_combined_rf %>% filter(is_future == TRUE), aes(x = days, y = predicted_cases), color = brewer.pal(3, "Set2")[3], linetype = "dotted", linewidth = 1) +  # Future predictions in dashed line
+  labs(
+    title = "COVID-19 Growth Fitted and Predicted with Random Forest Model",
+    subtitle = paste("Predictions for the Next", future_days, "Days in Blue"),
+    x = "Days Since First Case",
+    y = "Total Cases"
+  ) +
   theme_minimal() +
   theme(
     legend.position = "none",
     plot.title = element_text(hjust = 0.5),  # Center the title
-    plot.subtitle = element_text(hjust = 0.5),  # Center the subtitle
-  ) +  # Remove legend for simplicity
-  annotation_custom(
-    grob = textGrob(
-      label = paste("R² =", round(R2, 4), 
-                    "\nRMSE =", round(RMSE, 2), 
-                    "\nMAE =", round(MAE, 2), 
-                    "\nCV R² =", round(cv_metrics_avg["R2"], 4), 
-                    "\nCV RMSE =", round(cv_metrics_avg["RMSE"], 2), 
-                    "\nCV MAE =", round(cv_metrics_avg["MAE"], 2),
-                    "\nBP p-value =", round(bp_p_value, 4)),  # Add Breusch-Pagan p-value to the text
-      gp = gpar(fontsize = 10)
-    ),
-    xmin = 3050, xmax = 300, ymin = 1000, ymax = 25000  # Adjust the position of the annotation
+    plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
+  ) +
+  annotate(
+    "text", 
+    x = max(df_combined_rf$days) - 10, 
+    y = max(df_combined_rf$totalcases) * 0.30, 
+    label = performance_text, 
+    hjust = 1, 
+    size = 4, 
+    color = "black", 
   )
 
 
@@ -245,26 +242,51 @@ With respect to cross validation, CV $R^2$ is close to 1, indicating that the mo
 
 The blue region, after the 1600 day mark, indicates where the model has predicted the total number of cases for the next 365 days. This demonstrates the model's ability to provide future forecasting based on little more than a total daily case count. The model predicts a "plateau" for the total case count, beyond which the number of cases will not grow. In truth there would continue to be new reported cases of COVID-19 (as long as the disease is still circulating), so this plateau would not be perfectly flat, but the general trend is followed; case numbers are beginning to stabilize.
 
-Finally, the results of the Breusch-Pagan test suggest that there is no significant evidence of heteroscedasticity in the residuals. We should examine a residuals plot to be sure that there are no obvious patterns.
-
-## Residuals Plot
-
 ```{r}
-residuals <- df$totalcases - df$fitted_cases
-# Create the residuals plot using a color-blind friendly palette from RColorBrewer
-ggplot(df, aes(x = days, y = residuals)) +
-  geom_point(color = brewer.pal(3, "Dark2")[1]) +  # Use the first color from Set2 palette for the points
-  geom_hline(yintercept = 0, linetype = "dashed", color = brewer.pal(3, "Dark2")[2]) +  # Use the second color for the reference line
-  labs(title = str_wrap("Residuals Plot: Random Forest Model",width=50),
-       x = "Days Since First Case",
-       y = "Residuals (Observed - Fitted)") +
-  theme_minimal() + theme(
-    plot.title = element_text(hjust = 0.5),  # Center the title
-  )
+# Generate learning curves by training on subsets of the data
+train_sizes <- seq(1, nrow(train_data), by = 5)  # Use training sizes from 1 to full training set size
+train_rmse_curve <- numeric(length(train_sizes))
+test_rmse_curve <- numeric(length(train_sizes))
+
+# Generate learning curves by training on subsets of the data
+for (i in seq_along(train_sizes)) {
+  subset_train_data <- train_data[1:train_sizes[i], ]
+  
+  # Fit Random Forest on the subset of training data
+  rf_model <- randomForest(sqrt_totalcases ~ days, data = subset_train_data, ntree = 50)
+  
+  # Predict on training and testing data
+  train_preds <- predict(rf_model, newdata = subset_train_data)
+  test_preds <- predict(rf_model, newdata = test_data)
+  
+  # Calculate RMSE for training and testing data
+  train_rmse_curve[i] <- sqrt(mean((subset_train_data$sqrt_totalcases - train_preds)^2))
+  test_rmse_curve[i] <- sqrt(mean((test_data$sqrt_totalcases - test_preds)^2))
+}
+
+# Create a data frame for learning curve data
+learning_curve_data <- data.frame(
+  Train_Size = rep(train_sizes, each = 2),
+  RMSE = c(train_rmse_curve, test_rmse_curve),
+  Data = rep(c("Training", "Testing"), times = length(train_sizes))
+)
+
+# Plot the learning curves as lines
+ggplot(learning_curve_data, aes(x = Train_Size, y = RMSE, color = Data)) +
+  geom_line(size = 1) +  # Line for learning curves
+  geom_point(size = 2) +  # Points for each RMSE value
+  labs(
+    title = "Learning Curves: RMSE for Training and Testing Data",
+    x = "Training Set Size",
+    y = "RMSE",
+    color="Legend"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right")
 
 ```
-
-The residuals are tightly clustered about the zero line with very little variation, save for the period from about 600-800 days, where there is a wide spread across the zero line. This coincides with the period of most rapid growth of COVID-19 in the province; the model may be struggling to capture this rapid change. Apart from that, however, the results of the residuals plot are excellent; there are no obvious patterns or spreading out beyond the 600-800 day mark. The model is performing well and there is no evidence of heteroscedasticity.
+  
+As a residuals plot is not as useful in evaluating the performance of a decision-tree based model like the random forest model, we have instead generated a learning curves plot. The plot shows that at around the 100 mark the training and test RMSE are at their highest point, but they very rapidly decrease, almost in unison, converging near the zero line. In summary, the model rapidly improves and generalizes well with more training data.
 
 # Conclusion
 
