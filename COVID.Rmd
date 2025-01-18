@@ -114,7 +114,7 @@ The Pfizer-BioNTech Comirnaty vaccines (with the original strain) have been admi
 
 To study the progression of COVID-19 in the province, we will make use of the **random forest model.** The random forest model is an "ensemble machine learning algorithm that combines multiple decision trees to improve the accuracy, robustness, and generalization of predictions. It is widely used for both regression and classification tasks and is particularly effective for handling large, complex datasets with a variety of input features."<sup>1</sup>
 
-## Fitted Curve
+## Plots
 
 ```{r}
 # Load necessary libraries
@@ -164,7 +164,7 @@ train_df <- data.frame(days = X_train, sqrt_totalcases = y_train)
 test_df <- data.frame(days = X_test, sqrt_totalcases = y_test)
 
 # Train the Random Forest model using caret
-rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = 500, mtry = 1, importance = TRUE)
+rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = 100, mtry = 1, importance = TRUE)
 
 # Print model summary
 print(rf_model)
@@ -189,7 +189,7 @@ cv_model <- train(
   method = "rf", 
   trControl = trainControl(method = "cv", number = 5),  # 5-fold cross-validation
   tuneGrid = expand.grid(mtry = 1),  # Adjust this grid for hyperparameter tuning
-  ntree = 500
+  ntree = 100
 )
 
 # Cross-validation evaluation metrics
@@ -206,17 +206,63 @@ subtitle_text <- glue(
 # Wrap the subtitle text to fit within the plot using str_wrap
 wrapped_subtitle <- str_wrap(subtitle_text, width = 80)
 
-# Plot predictions vs actual values with subtitle
-plot(y_test, y_pred, 
-     main = "Random Forest Predictions vs Actual Values", 
-     xlab = "Actual", ylab = "Predicted", 
-     pch = 19, col = "blue")
-abline(a = 0, b = 1, col = "red", lwd = 2)
+# Fitted curve for the existing data
+# Generate predictions for the training and test sets
+train_pred <- predict(rf_model, newdata = train_df)
+test_pred <- predict(rf_model, newdata = test_df)
 
-# Add the subtitle with performance metrics
-mtext(wrapped_subtitle, side = 3, line = 0, cex = 0.8, adj = 0.5)
+# Generate future predictions (for the next 365 days)
+future_days <- data.frame(days = seq(max(df$days) + 1, max(df$days) + 365, by = 1))  # Next 365 days
+future_pred <- predict(rf_model, newdata = future_days)
+
+# Plot 1: Random Forest Predictions vs Actual Values as ggplot
+ggplot() +
+  geom_point(aes(x = y_test, y = y_pred), color = "blue") +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+  labs(title = "Random Forest Predictions vs Actual Values",
+       x = "Actual", y = "Predicted",
+       subtitle = wrapped_subtitle) +
+  theme_minimal()
+
+# Plot 2: Learning Curves (Training and Test RMSE)
+learning_curve_data <- data.frame(
+  ntree = rep(seq(50, 100, by = 50), 2),
+  rmse = c(train_rmse, test_rmse),
+  dataset = rep(c("Training", "Test"), each = length(seq(50, 100, by = 50)))
+)
+
+ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Learning Curves for Random Forest",
+       x = "Number of Trees (ntree)",
+       y = "Root Mean Squared Error (RMSE)",
+       subtitle = "Training vs. Test Performance for Different Numbers of Trees") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "red")) +
+  theme(legend.title = element_blank())
+
+# Plot 3: Fitted Curve for Full Data with Future Predictions using ggplot
+full_data <- data.frame(days = df$days, sqrt_totalcases = df$sqrt_totalcases)
+full_data$predictions <- predict(rf_model, newdata = full_data)
+
+future_data <- data.frame(days = seq(max(df$days) + 1, max(df$days) + 365, by = 1))
+future_data$predictions <- future_pred
+
+ggplot() +
+  geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = "black") +
+  geom_line(data = full_data, aes(x = days, y = predictions), color = "green", size = 1) +
+  geom_line(data = future_data, aes(x = days, y = predictions), color = "blue", size = 1, linetype = "dashed") +
+  labs(
+    title = "Fitted Curve for Full Data and Future Predictions",
+    x = "Days", y = "Sqrt(Total Cases)",
+    subtitle = "Fitted Curve for Full Data with Predictions for the Next 365 Days"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("black", "green", "blue"))
 
 ```
+
 
 The learning curves plot "is a graphical representation that shows how a machine learning model's performance improves as it is trained on more data or with different model configurations (such as the number of trees in a [random forest], or the number of training iterations in other models)."<sup>1</sup> It is useful in diagnosing issues with a model such as overfitting and underfitting, as well as for evaluating the model's ability to generalize. A residuals plot would typically be examined for this purpose, but in the case of the random forest model, a residuals plot is less useful in evaluating the model's performance. This stems from the fact that the random forest model is non-linear; it captures "complex relationships between the input features and the target variable by aggregating predictions from multiple decision trees."<sup>1</sup> A residuals plot assumes a linear relationship between the predicted values and the residuals, so in the case of models like random forest which do not assume linearity, they may not provide insight into the performance of such models.
 
