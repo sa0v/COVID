@@ -126,19 +126,20 @@ library(RColorBrewer)
 library(glue)  # For formatting the subtitle text
 library(stringr)  # For text wrapping
 
-# Load and prepare the data
-data <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
+# Generate synthetic data
+set.seed(123)
+days <- 1:100
+totalcases <- 100 * (1 / (1 + exp(-0.1 * (days - 50)))) + rnorm(100, 0, 10)  # Logistic growth with noise
+df <- data.frame(days = days, totalcases = totalcases)
 
-df <- data %>%
-  filter(prname == "Newfoundland and Labrador") %>%
+# Prepare the data: add sqrt transformation and handle missing values
+df <- df %>%
   mutate(
-    totalcases = as.numeric(totalcases), 
-    days = as.integer(as.Date(date, format = "%Y-%m-%d") - min(as.Date(date, format = "%Y-%m-%d"))),  # Calculate days since the first case
-    sqrt_totalcases = sqrt(totalcases)  # Square root transformation of the totalcases
+    totalcases = as.numeric(totalcases),
+    sqrt_totalcases = sqrt(totalcases)
   ) %>%
-  drop_na(sqrt_totalcases) %>% # Drop NA values for the transformed variable
-  filter(!is.na(totalcases) & !is.infinite(totalcases)) %>%
-  filter(totalcases > 0)
+  drop_na() %>%  # Remove rows with NA values
+  filter(!is.infinite(sqrt_totalcases) & !is.infinite(days))  # Remove rows with Inf values
 
 # Prepare feature matrix (X) and target variable (y)
 X <- df %>%
@@ -177,11 +178,6 @@ rmse <- sqrt(mean((y_test - y_pred)^2))
 mae <- mean(abs(y_test - y_pred))
 r2 <- 1 - sum((y_test - y_pred)^2) / sum((y_test - mean(y_test))^2)
 
-# Print evaluation metrics
-cat("Test RMSE:", rmse, "\n")
-cat("Test MAE:", mae, "\n")
-cat("Test R²:", r2, "\n")
-
 # Cross-validation with caret
 cv_model <- train(
   sqrt_totalcases ~ days, 
@@ -206,22 +202,15 @@ subtitle_text <- glue(
 # Wrap the subtitle text to fit within the plot using str_wrap
 wrapped_subtitle <- str_wrap(subtitle_text, width = 80)
 
-# Fitted curve for the existing data
-# Generate predictions for the training and test sets
-train_pred <- predict(rf_model, newdata = train_df)
-test_pred <- predict(rf_model, newdata = test_df)
-
-# Generate future predictions (for the next 365 days)
-future_days <- data.frame(days = seq(max(df$days) + 1, max(df$days) + 365, by = 1))  # Next 365 days
-future_pred <- predict(rf_model, newdata = future_days)
-
 # Plot 1: Random Forest Predictions vs Actual Values as ggplot
 ggplot() +
   geom_point(aes(x = y_test, y = y_pred), color = "blue") +
   geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-  labs(title = "Random Forest Predictions vs Actual Values",
-       x = "Actual", y = "Predicted",
-       subtitle = wrapped_subtitle) +
+  labs(
+    title = "Random Forest Predictions vs Actual Values",
+    x = "Actual", y = "Predicted",
+    subtitle = wrapped_subtitle
+  ) +
   theme_minimal()
 
 # Plot 2: Learning Curves (Training and Test RMSE)
@@ -234,10 +223,12 @@ learning_curve_data <- data.frame(
 ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
   geom_line() +
   geom_point() +
-  labs(title = "Learning Curves for Random Forest",
-       x = "Number of Trees (ntree)",
-       y = "Root Mean Squared Error (RMSE)",
-       subtitle = "Training vs. Test Performance for Different Numbers of Trees") +
+  labs(
+    title = "Learning Curves for Random Forest",
+    x = "Number of Trees (ntree)",
+    y = "Root Mean Squared Error (RMSE)",
+    subtitle = "Training vs. Test Performance for Different Numbers of Trees"
+  ) +
   theme_minimal() +
   scale_color_manual(values = c("blue", "red")) +
   theme(legend.title = element_blank())
@@ -246,8 +237,10 @@ ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
 full_data <- data.frame(days = df$days, sqrt_totalcases = df$sqrt_totalcases)
 full_data$predictions <- predict(rf_model, newdata = full_data)
 
-future_data <- data.frame(days = seq(max(df$days) + 1, max(df$days) + 365, by = 1))
-future_data$predictions <- future_pred
+future_days <- data.frame(days = seq(max(df$days) + 1, max(df$days) + 365, by = 1))
+future_pred <- predict(rf_model, newdata = future_days)
+
+future_data <- data.frame(days = future_days$days, predictions = future_pred)
 
 ggplot() +
   geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = "black") +
@@ -261,10 +254,34 @@ ggplot() +
   theme_minimal() +
   scale_color_manual(values = c("black", "green", "blue"))
 
+# Plot 4: Fitted Curve for Synthetic Data (with Performance Metrics)
+ggplot() +
+  geom_point(data = df, aes(x = days, y = sqrt_totalcases), color = "black") +  # Actual data points
+  geom_line(data = df, aes(x = days, y = predict(rf_model, newdata = df)), color = "green", size = 1) +  # Fitted curve
+  labs(
+    title = "Fitted Curve for Synthetic Data",
+    x = "Days", y = "Sqrt(Total Cases)",
+    subtitle = wrapped_subtitle
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("black", "green"))
+
+
+
 ```
 
 
-The learning curves plot "is a graphical representation that shows how a machine learning model's performance improves as it is trained on more data or with different model configurations (such as the number of trees in a [random forest], or the number of training iterations in other models)."<sup>1</sup> It is useful in diagnosing issues with a model such as overfitting and underfitting, as well as for evaluating the model's ability to generalize. A residuals plot would typically be examined for this purpose, but in the case of the random forest model, a residuals plot is less useful in evaluating the model's performance. This stems from the fact that the random forest model is non-linear; it captures "complex relationships between the input features and the target variable by aggregating predictions from multiple decision trees."<sup>1</sup> A residuals plot assumes a linear relationship between the predicted values and the residuals, so in the case of models like random forest which do not assume linearity, they may not provide insight into the performance of such models.
+## Actual vs. Predicted Values
+
+The first plot generated shows the difference between the actual values of case numbers, versus the predictions for case numbers made by the model, is very small. The fit is nearly ideal, with an $R^2$ value of nearly 1. The test root mean squared error (RMSE) is low, suggesting that the model's error in predictions are reasonably accurate. The test mean average error (MAE) is also low, another good indication of the model's performance.
+
+The cross-validation performance metrics point to the possibility of overfitting, however. The CV RMSE is low, which is a good sign of the model's ability to generalize, with a value lower than the test RMSE indicating that the model performs better on cross-validation (training data) compared to the test data. The CV MAE is also quite low, helping to support the notion of the model's ability to generalize. Finally, the CV $R^2$ value is again close to 1, showing that the model fits nearly perfectly to the training data. This may be another indication of overfitting, however, particularly if the model doesn't generalize well on the test set, as suggested by the test RMSE being higher in value.
+
+In summary, the plot and the related performance metrics suggests overall good performance but potential overfitting. In the case of overfitting,
+
+## Learning Curves
+
+The learning curves plot "is a graphical representation that shows how a machine learning model's performance improves as it is trained on more data or with different model configurations (such as the number of trees in a [random forest], or the number of training iterations in other models)."<sup>1</sup> It is useful in diagnosing issues with a model such as overfitting and underfitting, as well as for evaluating the model's ability to generalize.
 
 # Conclusion
 
