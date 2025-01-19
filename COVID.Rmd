@@ -210,9 +210,9 @@ future_predictions <- predict(rf_model, newdata = future_days)
 ggplot() +
   geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = brewer.pal(3,"Dark2")[1], size=3) +  # Actual data points
   geom_line(data = full_data, aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[2], linewidth=1) +  # Fitted curve
-  geom_point(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[3], size = 3) +  # Predictions for next 365 days as blue points
+  geom_line(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions),linetype="dashed", color = brewer.pal(3,"Dark2")[3], linewidth=1) +  # Predictions for next 365 days as blue dashed line
   labs(
-    title = str_wrap("COVID-19 in Newfoundland and Labrador Fitted and Predicted (Predictions for the Next 365 Days in Blue)",width=50),
+    title = str_wrap("COVID-19 in Newfoundland and Labrador Fitted and Predicted (Dashed Line Shows Predictions for Next 365 Days)",width=50),
     x = "Days", y = "Sqrt(Total Cases)",
     subtitle = wrapped_subtitle
   ) +
