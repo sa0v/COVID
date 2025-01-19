@@ -206,21 +206,7 @@ full_data$predictions <- predict(rf_model, newdata = full_data)
 future_days <- data.frame(days = (max(df$days) + 1):(max(df$days) + 365))
 future_predictions <- predict(rf_model, newdata = future_days)
 
-# Plot 1: Fitted Curve for Full Data with Performance Metrics in the Subtitle
-ggplot() +
-  geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = brewer.pal(3,"Dark2")[1], size=3) +  # Actual data points
-  geom_line(data = full_data, aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[2], linewidth=1) +  # Fitted curve
-  geom_line(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions),linetype="dashed", color = brewer.pal(3,"Dark2")[3], linewidth=1) +  # Predictions for next 365 days as blue dashed line
-  labs(
-    title = str_wrap("COVID-19 in Newfoundland and Labrador Fitted and Predicted (Dashed Line Shows Predictions for Next 365 Days)",width=50),
-    x = "Days", y = "Sqrt(Total Cases)",
-    subtitle = wrapped_subtitle
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust=0.5),
-    plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
-  )
+
 
 # Plot 2: Learning Curves (Training and Test RMSE)
 # Evaluate learning curve over different ntree values
@@ -240,24 +226,6 @@ learning_curve_data <- data.frame(
   rmse = c(train_rmse, test_rmse),
   dataset = rep(c("Training", "Test"), each = length(ntree_values))
 )
-
-# Plot learning curves
-ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
-  geom_line() +
-  geom_point() +
-  labs(
-    title = "Learning Curves for Random Forest",
-    x = "Number of Trees (ntree)",
-    y = "Root Mean Squared Error (RMSE)",
-    subtitle = "Training vs. Test Performance for Different Numbers of Trees",
-    color="Legend"
-  ) +
-  theme_minimal() +
-  scale_color_manual(values = c(brewer.pal(3,"Dark2")[1], brewer.pal(3,"Dark2")[2])) +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust=0.5),
-  )
 
 # Generate synthetic data for fitting the curve (logistic growth with noise)
 set.seed(123)
@@ -310,9 +278,64 @@ subtitle_text_synthetic <- glue(
 # Wrap the subtitle text for synthetic data
 wrapped_subtitle_synthetic <- str_wrap(subtitle_text_synthetic, width = 80)
 
-# Plot: Fitted Curve for Synthetic Data with Performance Metrics in the Subtitle
+```
+
+### Fitted Curve Plot
+
+```{r}
+  # Fitted curve for full data, with performance metrics in the subtitle.
 ggplot() +
-  geom_point(data = df_synthetic, aes(x = days, y = totalcases), color = brewer.pal(3,"Dark2")[1],size=3) +  # Actual synthetic data points
+  geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = brewer.pal(3,"Dark2")[1], size=3,alpha=0.5) +  # Actual data points
+  geom_line(data = full_data, aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[2], linewidth=1) +  # Fitted curve
+  geom_line(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions),linetype="dashed", color = brewer.pal(3,"Dark2")[3], linewidth=1) +  # Predictions for next 365 days as blue dashed line
+  labs(
+    title = str_wrap("COVID-19 in Newfoundland and Labrador Fitted and Predicted (Dashed Line Shows Predictions for Next 365 Days)",width=50),
+    x = "Days", y = "Sqrt(Total Cases)",
+    subtitle = wrapped_subtitle
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust=0.5),
+    plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
+  )
+```
+
+The first plot in the series shows a curve, predicted by the model, fitted to the full data set. The RMSE is low, indicating that the model's predictions are close to that of the observed values. The MAE is also low, suggesting a good model fit with very small errors. The $R^2$ value is close to one, indicating a nearly ideal fit.
+
+With respect to cross-validation metrics, the CV RMSE is slightly worse than that of the test RMSE, suggesting that the model performs slightly worse on different subsets of the data. Apart from that, it is quite reasonably low in value. The CV MAE is also low, indicating that the model performed well across folds, but was slightly less accurate on the test data. The CV $R^2$ is high; the model explains nearly all of the variability in the test data.
+
+### Learning Curves
+
+```{r}
+  # Learning curves.
+ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
+  geom_line(linewidth=1) +
+  geom_point(size=3,alpha=0.5) +
+  labs(
+    title = "Learning Curves for Random Forest",
+    x = "Number of Trees (ntree)",
+    y = "Root Mean Squared Error (RMSE)",
+    subtitle = "Training vs. Test Performance for Different Numbers of Trees",
+    color="Legend"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c(brewer.pal(3,"Dark2")[1], brewer.pal(3,"Dark2")[2])) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust=0.5),
+  )
+```
+
+The learning curves plot "is a graphical representation that shows how a machine learning model's performance improves as it is trained on more data or with different model configurations (such as the number of trees in a [random forest], or the number of training iterations in other models)."<sup>1</sup> It is useful in diagnosing issues with a model such as overfitting and underfitting, as well as for evaluating the model's ability to generalize.
+
+The learning curves plot in this case indicates that at only 1 tree, the model is underfitting the data. As the number of trees are increased to 2, there is a significant decrease in both test and training RMSE. This is consistent with better generalization and less underfitting. At 3 trees, both test and training RMSE stabilize at roughly the same level. This suggests that increasing the number of trees beyond 3 does not significantly improve the model's performance.
+
+### Synthetic Data
+
+```{r}
+  # Plot: Fitted Curve for Synthetic Data with Performance Metrics in the Subtitle
+ggplot() +
+  geom_point(data = df_synthetic, aes(x = days, y = totalcases), color = brewer.pal(3,"Dark2")[1],size=3,alpha=0.5) +  # Actual synthetic data points
   geom_line(data = df_synthetic, aes(x = days, y = synthetic_pred), color = brewer.pal(3,"Dark2")[2], linewidth = 1) +  # Fitted curve for synthetic data
   labs(
     title = "Fitted Curve for Synthetic Data",
@@ -323,24 +346,8 @@ ggplot() +
   theme(
     plot.title = element_text(hjust=0.5),
     plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
-  ) +
-  scale_color_manual(values = c("black", "green"))
-
+  )
 ```
-
-### Fitted Curve Plot
-
-The first plot in the series shows a curve, predicted by the model, fitted to the full data set. The RMSE is low, indicating that the model's predictions are close to that of the observed values. The MAE is also low, suggesting a good model fit with very small errors. The $R^2$ value is close to one, indicating a nearly ideal fit.
-
-With respect to cross-validation metrics, the CV RMSE is slightly worse than that of the test RMSE, suggesting that the model performs slightly worse on different subsets of the data. Apart from that, it is quite reasonably low in value. The CV MAE is also low, indicating that the model performed well across folds, but was slightly less accurate on the test data. The CV $R^2$ is high; the model explains nearly all of the variability in the test data.
-
-### Learning Curves
-
-The learning curves plot "is a graphical representation that shows how a machine learning model's performance improves as it is trained on more data or with different model configurations (such as the number of trees in a [random forest], or the number of training iterations in other models)."<sup>1</sup> It is useful in diagnosing issues with a model such as overfitting and underfitting, as well as for evaluating the model's ability to generalize.
-
-The learning curves plot in this case indicates that at only 1 tree, the model is underfitting the data. As the number of trees are increased to 2, there is a significant decrease in both test and training RMSE. This is consistent with better generalization and less underfitting. At 3 trees, both test and training RMSE stabilize at roughly the same level. This suggests that increasing the number of trees beyond 3 does not significantly improve the model's performance.
-
-### Synthetic Data
 
 How does the model perform against new and unseen data? The synthetic data plot and fitted curve simulates this condition. It is obvious from the performance metrics that despite the synthetic data being entirely new to the model, it performs reasonably well. The test $R^2$ is high, indicating a good fit to the synthetic data. The test RMSE is conversely low; this is an indication that the model's prediction errors are quite reasonable when the scale of total case numbers is taken into account. The test MAE is similarly low; the model's predictions are off by a very small amount on average.
 
