@@ -24,12 +24,16 @@ library(randomForest)
 library(glue)
 library(RColorBrewer)
 
-variants_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-epiSummary-variants.csv")
+variants_df <- read.csv(
+  "https://health-infobase.canada.ca/src/data/covidLive/covid19-epiSummary-variants.csv"
+)
 
 # Clean the data and calculate days and proportions
 variants_df <- variants_df |>
   janitor::clean_names() |>
-  mutate(days = as.integer(as.Date(week_of_collection, format = "%Y-%m-%d") - min(as.Date(week_of_collection, format = "%Y-%m-%d")))) |>
+  mutate(days = as.integer(
+    as.Date(week_of_collection, format = "%Y-%m-%d") - min(as.Date(week_of_collection, format = "%Y-%m-%d"))
+  )) |>
   mutate(variant = as.factor(variant)) |>
   # Calculate proportions and median proportions for each variant
   group_by(variant) |>
@@ -46,11 +50,19 @@ variant_order <- variants_df |>
 variants_df$variant <- factor(variants_df$variant, levels = variant_order)
 
 # Plotting the boxplots sorted by median proportions
-ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = variant)) +
-  geom_boxplot() + 
+ggplot(variants_df,
+       aes(
+         x = variant,
+         y = proportions,
+         group = variant,
+         color = variant
+       )) +
+  geom_boxplot() +
   labs(
     title = "Proportion of Different COVID-19 Variants Over Time",
-    subtitle = glue::glue("Newfoundland and Labrador (Last Updated on {max(variants_df$week_of_collection)})"),
+    subtitle = glue::glue(
+      "Newfoundland and Labrador (Last Updated on {max(variants_df$week_of_collection)})"
+    ),
     x = "COVID-19 Variant",
     y = "Proportion of Variants",
     fill = "COVID-19 Variant"
@@ -73,7 +85,9 @@ There are at least 13 known strains of COVID-19 circulating in the province. As 
 # Which vaccines are most commonly administered in the province?
 
 ```{r}
-vaccine_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv")
+vaccine_df <- read.csv(
+  "https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv"
+)
 
 # Boxplot for vaccine groups ordered by maximum value with wrapped x labels
 vaccine_df |>
@@ -81,26 +95,35 @@ vaccine_df |>
   filter(prename == "Newfoundland and Labrador") |>
   filter(vaccine_group != "Total" & vaccine_group != "Unknown") |>
   mutate(
-    vaccine_group = factor(vaccine_group, 
-                           levels = vaccine_df |>
-                             filter(prename == "Newfoundland and Labrador") |>
-                             group_by(vaccine_group) |>
-                             summarise(median_doses = median(numtotal_totaldoses_admin, na.rm = TRUE)) |>
-                             arrange(desc(median_doses)) |>
-                             pull(vaccine_group)),
+    vaccine_group = factor(
+      vaccine_group,
+      levels = vaccine_df |>
+        filter(prename == "Newfoundland and Labrador") |>
+        group_by(vaccine_group) |>
+        summarise(median_doses = median(numtotal_totaldoses_admin, na.rm = TRUE)) |>
+        arrange(desc(median_doses)) |>
+        pull(vaccine_group)
+    ),
     wrapped_vaccine_group = str_wrap(vaccine_group, width = 20)  # Wrap the text for x labels
   ) |>
   ggplot(aes(x = wrapped_vaccine_group, y = numtotal_totaldoses_admin, color = vaccine_group)) +
   geom_boxplot() +
   labs(
     title = str_wrap("Total Doses Administered by Vaccine Group", width = 50),
-    subtitle = glue::glue("Newfoundland and Labrador (Last Updated on {max(vaccine_df$week_end)})"),
+    subtitle = glue::glue(
+      "Newfoundland and Labrador (Last Updated on {max(vaccine_df$week_end)})"
+    ),
     x = "Vaccine Group",
     y = "Total Doses Administered"
   ) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),  # Adjusting angle for right-side up labels
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1
+    ),
+    # Adjusting angle for right-side up labels
     legend.position = "none",
     plot.title = element_text(hjust = 0.5),
     plot.subtitle = element_text(hjust = 0.5),
@@ -131,7 +154,8 @@ df <- data |>
   filter(prname == "Newfoundland and Labrador") |>
   mutate(
     totalcases = as.numeric(totalcases),
-    days = as.integer(as.Date(date, format = "%Y-%m-%d") - min(as.Date(date, format = "%Y-%m-%d"))),  # Calculate days since the first case
+    days = as.integer(as.Date(date, format = "%Y-%m-%d") - min(as.Date(date, format = "%Y-%m-%d"))),
+    # Calculate days since the first case
     sqrt_totalcases = sqrt(totalcases)  # Square root transformation of the totalcases
   ) |>
   drop_na(sqrt_totalcases) |>
@@ -162,7 +186,13 @@ train_df <- data.frame(days = X_train, sqrt_totalcases = y_train)
 test_df <- data.frame(days = X_test, sqrt_totalcases = y_test)
 
 # Train the Random Forest model using caret
-rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = 3, mtry = 1, importance = TRUE)
+rf_model <- randomForest(
+  sqrt_totalcases ~ days,
+  data = train_df,
+  ntree = 3,
+  mtry = 1,
+  importance = TRUE
+)
 
 # Print model summary
 print(rf_model)
@@ -177,11 +207,13 @@ r2 <- 1 - sum((y_test - y_pred)^2) / sum((y_test - mean(y_test))^2)
 
 # Cross-validation with caret
 cv_model <- train(
-  sqrt_totalcases ~ days, 
-  data = train_df, 
-  method = "rf", 
-  trControl = trainControl(method = "cv", number = 5),  # 5-fold cross-validation
-  tuneGrid = expand.grid(mtry = 1),  # Adjust this grid for hyperparameter tuning
+  sqrt_totalcases ~ days,
+  data = train_df,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5),
+  # 5-fold cross-validation
+  tuneGrid = expand.grid(mtry = 1),
+  # Adjust this grid for hyperparameter tuning
   ntree = 3
 )
 
@@ -200,7 +232,8 @@ subtitle_text <- glue(
 wrapped_subtitle <- str_wrap(subtitle_text, width = 80)
 
 # Fitted curve for the full data
-full_data <- data.frame(days = df$days, sqrt_totalcases = df$sqrt_totalcases)
+full_data <- data.frame(days = df$days,
+                        sqrt_totalcases = df$sqrt_totalcases)
 full_data$predictions <- predict(rf_model, newdata = full_data)
 
 # Extend the range of days for prediction (next 365 days)
@@ -211,12 +244,26 @@ future_predictions <- predict(rf_model, newdata = future_days)
 # Evaluate learning curve over different ntree values
 ntree_values <- seq(1, 3, by = 1)
 train_rmse <- sapply(ntree_values, function(ntree) {
-  rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = ntree, mtry = 1)
-  sqrt(mean((y_train - predict(rf_model, newdata = train_df))^2))
+  rf_model <- randomForest(
+    sqrt_totalcases ~ days,
+    data = train_df,
+    ntree = ntree,
+    mtry = 1
+  )
+  sqrt(mean((
+    y_train - predict(rf_model, newdata = train_df)
+  )^2))
 })
 test_rmse <- sapply(ntree_values, function(ntree) {
-  rf_model <- randomForest(sqrt_totalcases ~ days, data = train_df, ntree = ntree, mtry = 1)
-  sqrt(mean((y_test - predict(rf_model, newdata = test_df))^2))
+  rf_model <- randomForest(
+    sqrt_totalcases ~ days,
+    data = train_df,
+    ntree = ntree,
+    mtry = 1
+  )
+  sqrt(mean((
+    y_test - predict(rf_model, newdata = test_df)
+  )^2))
 })
 
 # Create learning curve data frame
@@ -243,7 +290,10 @@ y_synthetic <- df_synthetic$totalcases  # Target variable for synthetic data
 train_df_synthetic <- data.frame(days = X_synthetic, totalcases = y_synthetic)
 
 # Train the Random Forest model for synthetic data
-rf_model_synthetic <- randomForest(totalcases ~ days, data = train_df_synthetic, ntree = 3, mtry = 1)
+rf_model_synthetic <- randomForest(totalcases ~ days,
+                                   data = train_df_synthetic,
+                                   ntree = 3,
+                                   mtry = 1)
 
 # Make predictions for the synthetic data
 synthetic_pred <- predict(rf_model_synthetic, newdata = train_df_synthetic)
@@ -255,11 +305,13 @@ r2_synthetic <- 1 - sum((y_synthetic - synthetic_pred)^2) / sum((y_synthetic - m
 
 # Cross-validation for synthetic data
 cv_model_synthetic <- train(
-  totalcases ~ days, 
-  data = train_df_synthetic, 
-  method = "rf", 
-  trControl = trainControl(method = "cv", number = 5),  # 5-fold cross-validation
-  tuneGrid = expand.grid(mtry = 1),  # Adjust this grid for hyperparameter tuning
+  totalcases ~ days,
+  data = train_df_synthetic,
+  method = "rf",
+  trControl = trainControl(method = "cv", number = 5),
+  # 5-fold cross-validation
+  tuneGrid = expand.grid(mtry = 1),
+  # Adjust this grid for hyperparameter tuning
   ntree = 3
 )
 
@@ -277,27 +329,44 @@ subtitle_text_synthetic <- glue(
 # Wrap the subtitle text for synthetic data
 wrapped_subtitle_synthetic <- str_wrap(subtitle_text_synthetic, width = 80)
 
-
 ```
 
 ### Fitted Curve Plot
 
 ```{r}
-  # Fitted curve for full data, with performance metrics in the subtitle.
+# Fitted curve for full data, with performance metrics in the subtitle.
 ggplot() +
-  geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = brewer.pal(3,"Dark2")[1], size=3) +  # Actual data points
-  geom_line(data = full_data, aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[2], linewidth=1) +  # Fitted curve
-  geom_line(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions),linetype="dashed", color = brewer.pal(3,"Dark2")[3], linewidth=1) +  # Predictions for next 365 days as blue dashed line
+  geom_point(
+    data = full_data,
+    aes(x = days, y = sqrt_totalcases),
+    color = brewer.pal(3, "Dark2")[1],
+    size = 3
+  ) +  # Actual data points
+  geom_line(
+    data = full_data,
+    aes(x = days, y = predictions),
+    color = brewer.pal(3, "Dark2")[2],
+    linewidth = 1
+  ) +  # Fitted curve
+  geom_line(
+    data = data.frame(days = future_days$days, predictions = future_predictions),
+    aes(x = days, y = predictions),
+    linetype = "dashed",
+    color = brewer.pal(3, "Dark2")[3],
+    linewidth = 1
+  ) +  # Predictions for next 365 days as blue dashed line
   labs(
-    title = str_wrap("COVID-19 in Newfoundland and Labrador Fitted and Predicted (Dashed Line Shows Predictions for Next 365 Days)",width=50),
-    x = "Days", y = "Sqrt(Total Cases)",
+    title = str_wrap(
+      "COVID-19 in Newfoundland and Labrador Fitted and Predicted (Dashed Line Shows Predictions for Next 365 Days)",
+      width = 50
+    ),
+    x = "Days",
+    y = "Sqrt(Total Cases)",
     subtitle = wrapped_subtitle
   ) +
   theme_minimal() +
-  theme(
-    plot.title = element_text(hjust=0.5),
-    plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle
-  )
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle)
 ```
 
 The first plot in the series shows a curve, predicted by the model, fitted to the full data set. The RMSE is low, indicating that the model's predictions are close to that of the observed values. The MAE is also low, suggesting a good model fit with very small errors. The $R^2$ value is close to one, indicating a nearly ideal fit.
@@ -307,23 +376,21 @@ With respect to cross-validation metrics, the CV RMSE is slightly worse than tha
 ### Learning Curves
 
 ```{r}
-  # Learning curves.
+# Learning curves.
 ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
-  geom_line(linewidth=1) +
-  geom_point(size=3) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
   labs(
     title = "Learning Curves for Random Forest",
     x = "Number of Trees (ntree)",
     y = "Root Mean Squared Error (RMSE)",
     subtitle = "Training vs. Test Performance for Different Numbers of Trees",
-    color="Legend"
+    color = "Legend"
   ) +
   theme_minimal() +
-  scale_color_manual(values = c(brewer.pal(3,"Dark2")[1], brewer.pal(3,"Dark2")[2])) +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust=0.5),
-  )
+  scale_color_manual(values = c(brewer.pal(3, "Dark2")[1], brewer.pal(3, "Dark2")[2])) +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),)
 ```
 
 The learning curves plot "is a graphical representation that shows how a machine learning model's performance improves as it is trained on more data or with different model configurations (such as the number of trees in a [random forest], or the number of training iterations in other models)."<sup>1</sup> It is useful in diagnosing issues with a model such as overfitting and underfitting, as well as for evaluating the model's ability to generalize.
