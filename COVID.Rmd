@@ -366,7 +366,7 @@ ggplot() +
   ) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(hjust = 0.5)  # Center the subtitle)
+        plot.subtitle = element_text(hjust = 0.5))
 ```
 
 The first plot in the series shows a curve, predicted by the model, fitted to the full data set. The RMSE is low, indicating that the model's predictions are close to that of the observed values. The MAE is also low, suggesting a good model fit with very small errors. The $R^2$ value is close to one, indicating a nearly ideal fit.
