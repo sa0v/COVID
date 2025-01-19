@@ -249,7 +249,8 @@ ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
     title = "Learning Curves for Random Forest",
     x = "Number of Trees (ntree)",
     y = "Root Mean Squared Error (RMSE)",
-    subtitle = "Training vs. Test Performance for Different Numbers of Trees"
+    subtitle = "Training vs. Test Performance for Different Numbers of Trees",
+    color="Legend"
   ) +
   theme_minimal() +
   scale_color_manual(values = c(brewer.pal(3,"Dark2")[1], brewer.pal(3,"Dark2")[2])) +
