@@ -18,34 +18,32 @@ To answer this question, we can make use of a data set which tracks the proporti
 
 ```{r}
 library(tidyverse)
-library(janitor)
-library(viridis)
+library(ggthemes)
 library(caret)
 library(randomForest)
-library(ggthemes)
-library(RColorBrewer)
 library(glue)
+library(RColorBrewer)
 
-# Read the data
-variants_df <- read_csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-epiSummary-variants.csv")
+variants_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-epiSummary-variants.csv")
 
 # Clean the data and calculate days and proportions
-variants_df <- variants_df %>%
-  janitor::clean_names() %>%
-  mutate(days = as.integer(as.Date(week_of_collection, format = "%Y-%m-%d") - min(as.Date(week_of_collection, format = "%Y-%m-%d")))) %>%
-  mutate(variant = as.factor(variant)) %>%
+variants_df <- variants_df |>
+  janitor::clean_names() |>
+  mutate(days = as.integer(as.Date(week_of_collection, format = "%Y-%m-%d") - min(as.Date(week_of_collection, format = "%Y-%m-%d")))) |>
+  mutate(variant = as.factor(variant)) |>
   # Calculate proportions and median proportions for each variant
-  group_by(variant) %>%
-  mutate(proportions = proportions / 100) %>%
-  mutate(median_proportion = median(proportions, na.rm = TRUE)) %>%
-  ungroup()
+  group_by(variant) |>
+  mutate(proportions = proportions / 100) |>
+  mutate(median_proportion = median(proportions, na.rm = TRUE))
 
 # Reorder 'variant' based on median_proportion in descending order
-variants_df$variant <- factor(variants_df$variant, levels = variants_df %>% 
-                      group_by(variant) %>% 
-                      summarise(median = median(median_proportion, na.rm = TRUE)) %>% 
-                      arrange(desc(median)) %>% 
-                      pull(variant))
+variant_order <- variants_df |>
+  group_by(variant) |>
+  summarise(median = median(median_proportion, na.rm = TRUE)) |>
+  arrange(desc(median)) |>
+  pull(variant)
+
+variants_df$variant <- factor(variants_df$variant, levels = variant_order)
 
 # Plotting the boxplots sorted by median proportions
 ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = variant)) +
@@ -61,11 +59,12 @@ ggplot(variants_df, aes(x = variant, y = proportions, group = variant, color = v
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "none",
-    plot.title = element_text(hjust=0.5),
-    plot.subtitle = element_text(hjust=0.5),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
   ) +
   scale_color_viridis_d() +
   scale_y_continuous(labels = scales::percent)
+  
 
 ```
 
@@ -77,20 +76,20 @@ There are at least 13 known strains of COVID-19 circulating in the province. As 
 vaccine_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv")
 
 # Boxplot for vaccine groups ordered by maximum value with wrapped x labels
-vaccine_df %>%
-  janitor::clean_names() %>%
-  filter(prename == "Newfoundland and Labrador") %>%
-  filter(vaccine_group != "Total"  & vaccine_group != "Unknown") %>%
+vaccine_df |>
+  janitor::clean_names() |>
+  filter(prename == "Newfoundland and Labrador") |>
+  filter(vaccine_group != "Total" & vaccine_group != "Unknown") |>
   mutate(
     vaccine_group = factor(vaccine_group, 
-                           levels = vaccine_df %>%
-                             filter(prename == "Newfoundland and Labrador") %>%
-                             group_by(vaccine_group) %>%
-                             summarise(median_doses = median(numtotal_totaldoses_admin, na.rm = TRUE)) %>%
-                             arrange(desc(median_doses)) %>%
+                           levels = vaccine_df |>
+                             filter(prename == "Newfoundland and Labrador") |>
+                             group_by(vaccine_group) |>
+                             summarise(median_doses = median(numtotal_totaldoses_admin, na.rm = TRUE)) |>
+                             arrange(desc(median_doses)) |>
                              pull(vaccine_group)),
-    wrapped_vaccine_group = str_wrap(vaccine_group, width = 50)  # Wrap the text for x labels
-  ) %>%
+    wrapped_vaccine_group = str_wrap(vaccine_group, width = 20)  # Wrap the text for x labels
+  ) |>
   ggplot(aes(x = wrapped_vaccine_group, y = numtotal_totaldoses_admin, color = vaccine_group)) +
   geom_boxplot() +
   labs(
@@ -104,10 +103,12 @@ vaccine_df %>%
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),  # Adjusting angle for right-side up labels
     legend.position = "none",
     plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust=0.5),
+    plot.subtitle = element_text(hjust = 0.5),
   ) +
   scale_y_continuous(labels = scales::number) +
   scale_color_viridis_d()
+
+
 
 
 
@@ -126,20 +127,20 @@ To study the progression of COVID-19 in the province, we will make use of the **
 # Load and prepare the data
 data <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/covid19-download.csv")
 
-df <- data %>%
-  filter(prname == "Newfoundland and Labrador") %>%
+df <- data |>
+  filter(prname == "Newfoundland and Labrador") |>
   mutate(
     totalcases = as.numeric(totalcases),
     days = as.integer(as.Date(date, format = "%Y-%m-%d") - min(as.Date(date, format = "%Y-%m-%d"))),  # Calculate days since the first case
     sqrt_totalcases = sqrt(totalcases)  # Square root transformation of the totalcases
-  ) %>%
-  drop_na(sqrt_totalcases) %>% # Drop NA values for the transformed variable
-  filter(!is.na(totalcases) & !is.infinite(totalcases)) %>%
+  ) |>
+  drop_na(sqrt_totalcases) |>
+  filter(!is.na(totalcases) & !is.infinite(totalcases)) |>
   filter(totalcases > 0)
 
 # Prepare feature matrix (X) and target variable (y)
-X <- df %>%
-  select(days) %>%
+X <- df |>
+  select(days) |>
   as.matrix()
 
 y <- df$sqrt_totalcases  # Target variable
@@ -206,8 +207,6 @@ full_data$predictions <- predict(rf_model, newdata = full_data)
 future_days <- data.frame(days = (max(df$days) + 1):(max(df$days) + 365))
 future_predictions <- predict(rf_model, newdata = future_days)
 
-
-
 # Plot 2: Learning Curves (Training and Test RMSE)
 # Evaluate learning curve over different ntree values
 ntree_values <- seq(1, 3, by = 1)
@@ -234,8 +233,8 @@ totalcases_synthetic <- 100 * (1 / (1 + exp(-0.1 * (days_synthetic - 50)))) + rn
 df_synthetic <- data.frame(days = days_synthetic, totalcases = totalcases_synthetic)
 
 # Prepare synthetic data feature matrix and target variable
-X_synthetic <- df_synthetic %>%
-  select(days) %>%
+X_synthetic <- df_synthetic |>
+  select(days) |>
   as.matrix()
 
 y_synthetic <- df_synthetic$totalcases  # Target variable for synthetic data
@@ -278,6 +277,7 @@ subtitle_text_synthetic <- glue(
 # Wrap the subtitle text for synthetic data
 wrapped_subtitle_synthetic <- str_wrap(subtitle_text_synthetic, width = 80)
 
+
 ```
 
 ### Fitted Curve Plot
@@ -285,7 +285,7 @@ wrapped_subtitle_synthetic <- str_wrap(subtitle_text_synthetic, width = 80)
 ```{r}
   # Fitted curve for full data, with performance metrics in the subtitle.
 ggplot() +
-  geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = brewer.pal(3,"Dark2")[1], size=3,alpha=0.5) +  # Actual data points
+  geom_point(data = full_data, aes(x = days, y = sqrt_totalcases), color = brewer.pal(3,"Dark2")[1], size=3) +  # Actual data points
   geom_line(data = full_data, aes(x = days, y = predictions), color = brewer.pal(3,"Dark2")[2], linewidth=1) +  # Fitted curve
   geom_line(data = data.frame(days = future_days$days, predictions = future_predictions), aes(x = days, y = predictions),linetype="dashed", color = brewer.pal(3,"Dark2")[3], linewidth=1) +  # Predictions for next 365 days as blue dashed line
   labs(
@@ -310,7 +310,7 @@ With respect to cross-validation metrics, the CV RMSE is slightly worse than tha
   # Learning curves.
 ggplot(learning_curve_data, aes(x = ntree, y = rmse, color = dataset)) +
   geom_line(linewidth=1) +
-  geom_point(size=3,alpha=0.5) +
+  geom_point(size=3) +
   labs(
     title = "Learning Curves for Random Forest",
     x = "Number of Trees (ntree)",
@@ -335,7 +335,7 @@ The learning curves plot in this case indicates that at only 1 tree, the model i
 ```{r}
   # Plot: Fitted Curve for Synthetic Data with Performance Metrics in the Subtitle
 ggplot() +
-  geom_point(data = df_synthetic, aes(x = days, y = totalcases), color = brewer.pal(3,"Dark2")[1],size=3,alpha=0.5) +  # Actual synthetic data points
+  geom_point(data = df_synthetic, aes(x = days, y = totalcases), color = brewer.pal(3,"Dark2")[1],size=3) +  # Actual synthetic data points
   geom_line(data = df_synthetic, aes(x = days, y = synthetic_pred), color = brewer.pal(3,"Dark2")[2], linewidth = 1) +  # Fitted curve for synthetic data
   labs(
     title = "Fitted Curve for Synthetic Data",
