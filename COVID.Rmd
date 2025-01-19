@@ -79,14 +79,14 @@ vaccine_df <- read.csv("https://health-infobase.canada.ca/src/data/covidLive/vac
 vaccine_df %>%
   janitor::clean_names() %>%
   filter(prename == "Newfoundland and Labrador") %>%
-  filter(vaccine_group != "Total"  & vaccine_group != "Unknown") |>
+  filter(vaccine_group != "Total"  & vaccine_group != "Unknown") %>%
   mutate(
     vaccine_group = factor(vaccine_group, 
                            levels = vaccine_df %>%
                              filter(prename == "Newfoundland and Labrador") %>%
                              group_by(vaccine_group) %>%
-                             summarise(max_doses = max(numtotal_totaldoses_admin, na.rm = TRUE)) %>%
-                             arrange(desc(max_doses)) %>%
+                             summarise(median_doses = median(numtotal_totaldoses_admin, na.rm = TRUE)) %>%
+                             arrange(desc(median_doses)) %>%
                              pull(vaccine_group)),
     wrapped_vaccine_group = str_wrap(vaccine_group, width = 50)  # Wrap the text for x labels
   ) %>%
@@ -94,7 +94,7 @@ vaccine_df %>%
   geom_boxplot() +
   labs(
     title = str_wrap("Total Doses Administered by Vaccine Group", width = 50),
-    subtitle = glue::glue("Newfoundland and Labrador (Last Updated on {max(variants_df$week_of_collection)})"),
+    subtitle = glue::glue("Newfoundland and Labrador (Last Updated on {max(vaccine_df$week_end)})"),
     x = "Vaccine Group",
     y = "Total Doses Administered"
   ) +
@@ -105,7 +105,6 @@ vaccine_df %>%
     plot.title = element_text(hjust = 0.5),
     plot.subtitle = element_text(hjust=0.5),
   ) +
-  scale_fill_viridis_d() +
   scale_y_continuous(labels = scales::number) +
   scale_color_viridis_d()
 
