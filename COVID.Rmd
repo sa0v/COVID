@@ -89,24 +89,23 @@ vaccine_df <- read.csv(
   "https://health-infobase.canada.ca/src/data/covidLive/vaccination-administration-bydosenumber_grouped.csv"
 )
 
-# Boxplot for vaccine groups ordered by maximum value with wrapped x labels
-vaccine_df |>
-  janitor::clean_names() |>
-  filter(prename == "Newfoundland and Labrador") |>
-  filter(vaccine_group != "Total" & vaccine_group != "Unknown") |>
+# Boxplot for vaccine groups ordered by median value with wrapped x labels
+vaccine_df %>%
+  janitor::clean_names() %>%
+  filter(prename == "Newfoundland and Labrador") %>%
+  filter(vaccine_group != "Total" & vaccine_group != "Unknown") %>%
   mutate(
     vaccine_group = factor(
       vaccine_group,
-      levels = vaccine_df |>
-        filter(prename == "Newfoundland and Labrador") |>
-        group_by(vaccine_group) |>
-        summarise(median_doses = median(numtotal_totaldoses_admin, na.rm = TRUE)) |>
-        arrange(desc(median_doses)) |>
-        pull(vaccine_group)
-    ),
-    wrapped_vaccine_group = str_wrap(vaccine_group, width = 20)  # Wrap the text for x labels
-  ) |>
-  ggplot(aes(x = wrapped_vaccine_group, y = numtotal_totaldoses_admin, color = vaccine_group)) +
+      levels = vaccine_df %>%
+        filter(prename == "Newfoundland and Labrador") %>%
+        group_by(vaccine_group) %>%
+        summarise(median_doses = median(numtotal_totaldoses_admin, na.rm = TRUE)) %>%
+        arrange(desc(median_doses)) %>%
+        pull(vaccine_group)  # Order levels by median
+    )
+  ) %>%
+  ggplot(aes(x = vaccine_group, y = numtotal_totaldoses_admin, color = vaccine_group)) +
   geom_boxplot() +
   labs(
     title = str_wrap("Total Doses Administered by Vaccine Group", width = 50),
@@ -114,22 +113,23 @@ vaccine_df |>
       "Newfoundland and Labrador (Last Updated on {max(vaccine_df$week_end)})"
     ),
     x = "Vaccine Group",
-    y = "Total Doses Administered"
+    y = "Total Doses Administered",
+    color="Legend"
   ) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(
-      angle = 45,
-      hjust = 1,
-      vjust = 1
-    ),
-    # Adjusting angle for right-side up labels
-    legend.position = "none",
+    axis.text.x = element_blank(),
+    legend.position = "bottom",  # Position legend at the bottom
     plot.title = element_text(hjust = 0.5),
     plot.subtitle = element_text(hjust = 0.5),
   ) +
   scale_y_continuous(labels = scales::number) +
-  scale_color_viridis_d()
+  scale_color_viridis_d() +
+  guides(
+    color = guide_legend(nrow = 6)  # Arrange legend into 3 rows
+  )
+
+
 
 
 
